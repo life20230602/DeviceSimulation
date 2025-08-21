@@ -1,0 +1,71 @@
+nc -vz 85.133.240.75 8080
+
+curl -x http://85.133.240.75:8080 https://httpbin.org/get --max-time 10  
+如果没有X-Forwarded-For,Via,Proxy-Connection  就是高匿IP
+
+https://checkerproxy.net/ 免费IP
+
+https://browserleaks.com/webgl  gpu检查
+
+
+(function() {
+    // ===== UA / navigator =====
+    Object.defineProperty(navigator, 'userAgent', {
+        get: () => "Mozilla/5.0 (iPhone; CPU iPhone OS 15_0 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/15.0 Mobile/15E148 Safari/604.1"
+    });
+    Object.defineProperty(navigator, 'platform', { get: () => 'iPhone' });
+    Object.defineProperty(navigator, 'vendor', { get: () => 'Apple Computer, Inc.' });
+    Object.defineProperty(navigator, 'maxTouchPoints', { get: () => 5 });
+    Object.defineProperty(navigator, 'hardwareConcurrency', { get: () => 6 });
+    Object.defineProperty(navigator, 'deviceMemory', { get: () => 4 });
+    Object.defineProperty(navigator, 'webdriver', { get: () => false });
+
+    // ===== screen & window =====
+    Object.defineProperty(screen, 'width', { get: () => 390 });
+    Object.defineProperty(screen, 'height', { get: () => 844 });
+    Object.defineProperty(window, 'devicePixelRatio', { get: () => 3 });
+    window.innerWidth = 390;
+    window.innerHeight = 844;
+
+    // ===== touch events =====
+    document.addEventListener("touchstart", function(){}, true);
+
+    // ===== WebGL GPU =====
+    const getParameterProxy = WebGLRenderingContext.prototype.getParameter;
+    WebGLRenderingContext.prototype.getParameter = function(parameter) {
+        if (parameter === 37445) return "Apple Inc.";      // UNMASKED_VENDOR_WEBGL
+        if (parameter === 37446) return "Apple A14 GPU";   // UNMASKED_RENDERER_WEBGL
+        return getParameterProxy.apply(this, arguments);
+    };
+    if (window.WebGL2RenderingContext) {
+        const getParameterProxy2 = WebGL2RenderingContext.prototype.getParameter;
+        WebGL2RenderingContext.prototype.getParameter = function(parameter) {
+            if (parameter === 37445) return "Apple Inc.";
+            if (parameter === 37446) return "Apple A14 GPU";
+            return getParameterProxy2.apply(this, arguments);
+        };
+    }
+
+    // ===== Canvas指纹扰动 =====
+    const toDataURL = HTMLCanvasElement.prototype.toDataURL;
+    HTMLCanvasElement.prototype.toDataURL = function() {
+        let result = toDataURL.apply(this, arguments);
+        return result.replace("AAAA", "AAAB"); // 简单扰动
+    };
+
+    // ===== Audio指纹扰动 =====
+    const getChannelData = AudioBuffer.prototype.getChannelData;
+    AudioBuffer.prototype.getChannelData = function() {
+        const result = getChannelData.apply(this, arguments);
+        for (let i=0; i<result.length; i++) result[i] += (Math.random() - 0.5) * 1e-6;
+        return result;
+    };
+
+    // ===== Permissions / DeviceOrientation =====
+    if (!navigator.permissions) navigator.permissions = {};
+    navigator.permissions.query = () => Promise.resolve({ state: 'granted' });
+
+    if (!window.DeviceOrientationEvent) {
+        window.DeviceOrientationEvent = function(){};
+    }
+})();
