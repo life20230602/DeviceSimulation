@@ -43,6 +43,19 @@ def init_database():
         )
     ''')
     
+    # 创建来路设置表
+    cursor.execute('''
+        CREATE TABLE referrers (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            url TEXT NOT NULL UNIQUE,
+            description TEXT,
+            category TEXT DEFAULT 'general',
+            is_active BOOLEAN DEFAULT 1,
+            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+            updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+        )
+    ''')
+    
     print("数据库表创建完成")
     
     # 插入默认设备数据
@@ -107,6 +120,18 @@ def init_database():
     
     print(f"已插入 {len(urls)} 个URL")
     
+    # 插入默认来路设置数据
+    referrers = [
+        ("https://www.google.com", "Google搜索引擎", "search")
+    ]
+    
+    cursor.executemany('''
+        INSERT INTO referrers (url, description, category)
+        VALUES (?, ?, ?)
+    ''', referrers)
+    
+    print(f"已插入 {len(referrers)} 个来路设置")
+    
     # 提交事务
     conn.commit()
     
@@ -117,9 +142,13 @@ def init_database():
     cursor.execute("SELECT COUNT(*) FROM urls")
     url_count = cursor.fetchone()[0]
     
+    cursor.execute("SELECT COUNT(*) FROM referrers")
+    referrer_count = cursor.fetchone()[0]
+    
     print(f"\n数据库初始化完成:")
     print(f"- 设备数量: {device_count}")
     print(f"- URL数量: {url_count}")
+    print(f"- 来路设置数量: {referrer_count}")
     print(f"- 数据库文件: {db_path}")
     
     # 关闭连接

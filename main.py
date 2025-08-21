@@ -15,6 +15,12 @@ from PyQt5.QtCore import QTimer, QPoint, QRect, Qt, pyqtSlot
 
 # 导入数据库管理器
 from database_manager import DatabaseManager
+# 导入来路设置管理器
+from referrer_manager import ReferrerManagerWidget
+# 导入点击配置管理器
+from click_config_manager import ClickConfigManagerWidget
+# 导入随机WebView弹窗
+from random_webview_dialog import RandomWebViewDialog
 
 # 字体配置
 def get_system_font():
@@ -35,7 +41,7 @@ class MainWindow(QMainWindow):
     def __init__(self):
         super().__init__()
         self.setWindowTitle("HS(火山) 浏览器管理工具")
-        self.setGeometry(100, 100, 1200, 800)
+        self.setGeometry(100, 100, 800, 600)
         self.auto_switch_ip_brower_timer = QTimer()
         self.auto_switch_ip_brower_timer.timeout.connect(self.auto_switch_ip_brower)
         # 删除模拟数据
@@ -170,16 +176,12 @@ class MainWindow(QMainWindow):
         self.tab_widget.addTab(device_tab, "设备管理")
         
         # 来路设置标签
-        referrer_tab = QWidget()
-        referrer_layout = QVBoxLayout(referrer_tab)
-        referrer_layout.addWidget(QLabel("来路设置"))
-        self.tab_widget.addTab(referrer_tab, "来路设置")
+        self.referrer_manager = ReferrerManagerWidget()
+        self.tab_widget.addTab(self.referrer_manager, "来路设置")
         
         # 点击配置标签
-        click_tab = QWidget()
-        click_layout = QVBoxLayout(click_tab)
-        click_layout.addWidget(QLabel("点击配置"))
-        self.tab_widget.addTab(click_tab, "点击配置")
+        self.click_config_manager = ClickConfigManagerWidget()
+        self.tab_widget.addTab(self.click_config_manager, "点击配置")
         
         # 流量曲线标签
         traffic_tab = QWidget()
@@ -203,13 +205,14 @@ class MainWindow(QMainWindow):
         
     # 删除show_weight_config方法
     def auto_switch_ip_brower(self):
-         if self.webview_dialog is not None:
-            self.webview_dialog.close()
+        pass
+        #  if self.webview_dialog is not None:
+        #     self.webview_dialog.close()
 
-         time.sleep(0.2)
-         self.create_random_webview()
-         self.count = self.count +1
-         print(f"第{self.count}次切换")
+        #  time.sleep(0.2)
+        #  self.create_random_webview()
+        #  self.count = self.count +1
+        #  print(f"第{self.count}次切换")
 
     def start_running(self):
         """开始运行"""
@@ -362,14 +365,55 @@ class MainWindow(QMainWindow):
         self.url_table.setRowCount(len(urls))
         
         for row, url_data in enumerate(urls):
-            # URL列
+            # URL列 - 使用可编辑的表格项
             url_item = QTableWidgetItem(url_data["url"])
+            url_item.setData(Qt.UserRole, url_data["id"])  # 存储URL ID
             self.url_table.setItem(row, 0, url_item)
             
             # 操作列
+            button_widget = QWidget()
+            button_layout = QHBoxLayout(button_widget)
+            button_layout.setContentsMargins(2, 2, 2, 2)
+            
+            # 编辑按钮
+            edit_btn = QPushButton("编辑")
+            edit_btn.setFixedSize(50, 25)
+            edit_btn.clicked.connect(lambda checked, u=url_data: self.edit_url(u))
+            edit_btn.setStyleSheet("""
+                QPushButton {
+                    background-color: #FF9800;
+                    color: white;
+                    border: none;
+                    border-radius: 3px;
+                    font-size: 12px;
+                }
+                QPushButton:hover {
+                    background-color: #F57C00;
+                }
+            """)
+            
+            # 删除按钮
             delete_btn = QPushButton("删除")
+            delete_btn.setFixedSize(50, 25)
             delete_btn.clicked.connect(lambda checked, u=url_data: self.delete_url(u["id"]))
-            self.url_table.setCellWidget(row, 1, delete_btn)
+            delete_btn.setStyleSheet("""
+                QPushButton {
+                    background-color: #F44336;
+                    color: white;
+                    border: none;
+                    border-radius: 3px;
+                    font-size: 12px;
+                }
+                QPushButton:hover {
+                    background-color: #D32F2F;
+                }
+            """)
+            
+            button_layout.addWidget(edit_btn)
+            button_layout.addWidget(delete_btn)
+            button_layout.addStretch()
+            
+            self.url_table.setCellWidget(row, 1, button_widget)
             
     def add_device(self):
         """添加设备"""
@@ -424,6 +468,35 @@ class MainWindow(QMainWindow):
         else:
             QMessageBox.warning(self, "错误", "添加URL失败，可能URL已存在")
             
+    def edit_url(self, url_data):
+        """编辑URL"""
+        from PyQt5.QtWidgets import QInputDialog
+        
+        # 弹出输入对话框
+        new_url, ok = QInputDialog.getText(
+            self, 
+            "编辑URL", 
+            f"请输入新的URL地址:\n当前URL: {url_data['url']}", 
+            text=url_data['url']
+        )
+        
+        if ok and new_url.strip():
+            new_url = new_url.strip()
+            
+            # 检查URL是否已存在（排除当前URL）
+            existing_urls = self.db_manager.get_all_urls()
+            for url in existing_urls:
+                if url["id"] != url_data["id"] and url["url"] == new_url:
+                    QMessageBox.warning(self, "警告", "URL地址已存在")
+                    return
+            
+            # 更新数据库
+            if self.db_manager.update_url(url_data["id"], new_url):
+                self.update_url_table()
+                QMessageBox.information(self, "成功", "URL已更新")
+            else:
+                QMessageBox.warning(self, "错误", "更新URL失败")
+                
     def delete_url(self, url_id):
         """删除URL"""
         url_data = self.db_manager.get_url_by_id(url_id)
@@ -463,8 +536,14 @@ class MainWindow(QMainWindow):
             QMessageBox.warning(self, "警告", "没有可用的URL")
             return
             
+        # 随机获取来路设置（用于设置HTTP Referer头）
+        random_referrer = self.referrer_manager.get_random_referrer()
+        referrer_url = random_referrer['url'] if random_referrer else None
+            
         # 创建WebView弹窗 - 每次创建新的实例
-        self.webview_dialog  = RandomWebViewDialog(self, device, random_url_data['url'])
+        self.webview_dialog = RandomWebViewDialog(
+            self, device, random_url_data['url'], self.click_config_manager, referrer_url
+        )
         self.webview_dialog.show()
         
         # 连接弹窗关闭信号，清理引用
@@ -481,174 +560,6 @@ class MainWindow(QMainWindow):
         except:
             pass
 
-
-class RandomWebViewDialog(QDialog):
-    """随机WebView弹窗"""
-    
-    def __init__(self, parent=None, device=None, url=None):
-        super().__init__(parent)
-        self.device = device
-        self.url = url
-        
-        self.setWindowTitle(f"WebView - {device['name'] if device else 'Unknown Device'}")
-        self.setGeometry(100, 100, device['width'] if device else 1200, device['height'] if device else 800)
-        self.setModal(False)  # 非模态，可以同时打开多个
-        
-        # 设置窗口属性，确保关闭时能正确清理
-        self.setAttribute(Qt.WA_DeleteOnClose, True)
-        
-        # 初始化UI
-        self.init_ui()
-        
-    def init_ui(self):
-        """初始化用户界面"""
-        layout = QVBoxLayout()
-        
-        # 设备信息显示
-        if self.device:
-            device_info = QLabel(f"设备: {self.device['name']} | "
-                               f"分辨率: {self.device['width']}x{self.device['height']} | "
-                               f"URL: {self.url}")
-            device_info.setStyleSheet("""
-                QLabel {
-                    background-color: #e3f2fd;
-                    padding: 10px;
-                    border-radius: 5px;
-                    border-left: 4px solid #2196f3;
-                    font-weight: bold;
-                }
-            """)
-            layout.addWidget(device_info)
-        
-        # 创建WebView
-        self.webview = QWebEngineView()
-        
-        # 设置WebView配置
-        self.setup_webview()
-        
-        # 连接信号
-        self.webview.loadStarted.connect(self.on_load_started)
-        self.webview.loadFinished.connect(self.on_load_finished)
-        
-        # 添加WebView到布局
-        layout.addWidget(self.webview)
-        
-        # 底部控制按钮
-        control_layout = QHBoxLayout()
-        
-        refresh_btn = QPushButton("刷新")
-        refresh_btn.clicked.connect(self.webview.reload)
-        control_layout.addWidget(refresh_btn)
-        
-        close_btn = QPushButton("关闭")
-        close_btn.clicked.connect(self.close)
-        control_layout.addWidget(close_btn)
-        
-        layout.addLayout(control_layout)
-        
-        # 设置布局
-        self.setLayout(layout)
-        
-        humanizedTouch = HumanizedController(self.webview)
-        humanizedTouch.add_click_area(QRect(100, 200, 150, 50), 3)  # 高权重区域
-        humanizedTouch.add_click_area(QRect(300, 400, 100, 80), 2)  # 中等权重区域
-        humanizedTouch.add_click_area(QRect(500, 600, 120, 60), 1)  # 低权重区域
-        self.webview.page().loadFinished.connect(lambda success: humanizedTouch.on_load_finished(success))
-        QTimer.singleShot(3000, humanizedTouch.start_browsing)
-
-        # 加载URL
-        if self.url:
-            self.webview.load(QUrl(self.url))
-
-    def setup_webview(self):
-        """设置WebView配置"""
-        if not self.device:
-            return
-        
-        proxy = "78.13.104.52:11743"
-        # os.environ["QTWEBENGINE_CHROMIUM_FLAGS"] = f"--proxy-server={proxy} --disable-webrtc"
-    
-        # 创建自定义profile
-        profile = QWebEngineProfile("random_webview_profile", self.webview)
-        
-        # 设置User Agent
-        profile.setHttpUserAgent(self.device["user_agent"])
-        
-        # 创建自定义页面
-        page = QWebEnginePage(profile, self.webview)
-        
-        # 启用JavaScript
-        settings = page.settings()
-        settings.setAttribute(QWebEngineSettings.JavascriptEnabled, True)
-        settings.setAttribute(QWebEngineSettings.LocalContentCanAccessRemoteUrls, True)
-        settings.setAttribute(QWebEngineSettings.AllowRunningInsecureContent, True)
-        
-         # 注入脚本，覆盖 navigator/screen/devicePixelRatio 等
-        js = """
-        // 修改 navigator
-        Object.defineProperty(navigator, 'platform', { get: () => 'iPhone' });
-        Object.defineProperty(navigator, 'vendor', { get: () => 'Apple Computer, Inc.' });
-        Object.defineProperty(navigator, 'maxTouchPoints', { get: () => 5 });
-        Object.defineProperty(navigator, 'hardwareConcurrency', { get: () => 6 });
-        Object.defineProperty(navigator, 'deviceMemory', { get: () => 4 });
-
-        // 修改 screen 信息
-        Object.defineProperty(screen, 'width', { get: () => 390 });
-        Object.defineProperty(screen, 'height', { get: () => 844 });
-        Object.defineProperty(window, 'devicePixelRatio', { get: () => 3 });
-
-        // 添加触摸事件支持
-        document.addEventListener("touchstart", function(){}, true);
-
-        // ========= 伪造 WebGL GPU =========
-        const getParameterProxy = WebGLRenderingContext.prototype.getParameter;
-        WebGLRenderingContext.prototype.getParameter = function(parameter) {
-            if (parameter === 37445) { // UNMASKED_VENDOR_WEBGL
-                return "Apple Inc.";
-            }
-            if (parameter === 37446) { // UNMASKED_RENDERER_WEBGL
-                return "Apple A14 GPU";  // 模拟 iPhone 12/13 GPU
-            }
-            return getParameterProxy.apply(this, arguments);
-        };
-
-        // WebGL2 也要覆盖
-        if (window.WebGL2RenderingContext) {
-            const getParameterProxy2 = WebGL2RenderingContext.prototype.getParameter;
-            WebGL2RenderingContext.prototype.getParameter = function(parameter) {
-                if (parameter === 37445) {
-                    return "Apple Inc.";
-                }
-                if (parameter === 37446) {
-                    return "Apple A14 GPU";
-                }
-                return getParameterProxy2.apply(this, arguments);
-            };
-        }
-        """
-        script = QWebEngineScript()
-        script.setInjectionPoint(QWebEngineScript.DocumentCreation)
-        script.setWorldId(QWebEngineScript.MainWorld)
-        script.setRunsOnSubFrames(True)
-        script.setSourceCode(js)
-
-        profile.scripts().insert(script)
-
-        # 设置视口大小 - 使用webview的resize方法
-        self.webview.resize(self.device["width"], self.device["height"])
-        
-        self.webview.setPage(page)
-        
-    def on_load_started(self):
-        """页面开始加载"""
-        self.setWindowTitle(f"加载中... - {self.device['name'] if self.device else 'Unknown Device'}")
-        
-    def on_load_finished(self, success):
-        """页面加载完成"""
-        if success:
-            self.setWindowTitle(f"WebView - {self.device['name'] if self.device else 'Unknown Device'}")
-        else:
-            self.setWindowTitle(f"加载失败 - {self.device['name'] if self.device else 'Unknown Device'}")
 
 
 def main():
