@@ -258,6 +258,19 @@ class RandomWebViewDialog(QDialog):
         
         # 注入脚本，覆盖 navigator/screen/devicePixelRatio 等
         js = """
+        Element.prototype._addEventListener = Element.prototype.addEventListener;
+        Element.prototype.addEventListener = function () {
+            let args = [...arguments]
+            let temp = args[1];
+            args[1] = function () {
+                let args2 = [...arguments];
+                args2[0] = Object.assign({}, args2[0])
+                args2[0].isTrusted = true;
+                return temp(...args2);
+            }
+            return this._addEventListener(...args);
+        }
+    
         // 修改 navigator
         Object.defineProperty(navigator, 'platform', { get: () => 'iPhone' });
         Object.defineProperty(navigator, 'vendor', { get: () => 'Apple Computer, Inc.' });

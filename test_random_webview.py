@@ -8,7 +8,7 @@ import sys
 from PyQt5.QtWidgets import QApplication
 from random_webview_dialog import RandomWebViewDialog
 from click_config_manager import ClickConfigManagerWidget
-
+from PyQt5.QtCore import QUrl
 def test_random_webview():
     """测试RandomWebViewDialog"""
     app = QApplication(sys.argv)
@@ -28,14 +28,15 @@ def test_random_webview():
     webview_dialog = RandomWebViewDialog(
         parent=None,
         device=device,
-        url="https://www.baidu.com",
+        # url="https://www.baidu.com",
         click_config_manager=click_config_manager
     )
-    
     webview_dialog.setWindowTitle("RandomWebViewDialog测试")
     webview_dialog.resize(800, 600)
     webview_dialog.show()
     
+    webview_dialog.webview.load(QUrl.fromLocalFile('/Users/track/Downloads/2.html'));
+
     print("RandomWebViewDialog测试窗口已打开")
     print(f"设备: {device['name']}")
     print(f"分辨率: {device['width']}x{device['height']}")
