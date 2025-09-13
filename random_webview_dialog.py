@@ -34,18 +34,24 @@ class RandomWebViewDialog(QDialog):
         # 滑动和点击定时器
         self.scroll_timer = QTimer()
         self.click_timer = QTimer()
-        self.scroll_timer.timeout.connect(self.perform_random_scroll)
         self.click_timer.timeout.connect(self.perform_random_click)
         
         # 域名检查定时器
         self.domain_check_timer = QTimer()
         self.domain_check_timer.timeout.connect(self.check_domain_and_redirect)
         
+        # URL变化检查定时器
+        self.url_change_timer = QTimer()
+        self.url_change_timer.timeout.connect(self.check_url_change)
+        self.url_change_timer.setSingleShot(True)
+        
         # 页面加载状态
         self.page_loaded = False
         
-        # 存储原始域名
-        self.original_domain = None
+        # 存储原始URL用于对比
+        self.original_url = url
+        # 存储当前加载的URL用于变化检查
+        self.current_loaded_url = None
         
         # 滑动控制变量
         self.scroll_count = 0
@@ -195,7 +201,10 @@ class RandomWebViewDialog(QDialog):
         
         # 加载URL
         if self.url:
-            self.webview.load(QUrl(self.url))
+            if self.referrer_url:
+                self.load_with_referrer_header()
+            else:
+                self.webview.load(QUrl(self.url))
 
     def setup_webview(self):
         """设置WebView配置"""
@@ -208,47 +217,14 @@ class RandomWebViewDialog(QDialog):
         # 设置User Agent
         profile.setHttpUserAgent(self.device["user_agent"])
         
-        # 设置Referrer策略（如果提供了referrer_url）
+        # 如果有referrer_url，设置请求拦截器
         if self.referrer_url:
-            # 通过自定义请求拦截器设置referrer
-            print(f"将通过请求拦截器设置HTTP Referer: {self.referrer_url}")
+            print(f"将设置Referer: {self.referrer_url}")
+            self.setup_referrer_interceptor(profile)
         
         # 创建自定义页面
         page = QWebEnginePage(profile, self.webview)
         
-        # 如果提供了referrer_url，设置请求拦截器
-        if self.referrer_url:
-            # 重写acceptNavigationRequest方法来设置referrer
-            original_accept_navigation = page.acceptNavigationRequest
-            
-            def custom_accept_navigation(url, _type, is_main_frame):
-                # 在导航请求中添加referrer头
-                if is_main_frame and _type == QWebEnginePage.NavigationTypeTyped:
-                    # 对于主框架的输入导航，设置referrer
-                    print(f"导航到 {url}，使用referrer: {self.referrer_url}")
-                    
-                    # 尝试通过页面设置referrer
-                    try:
-                        # 使用页面级别的referrer设置
-                        page.setUrl(url)
-                        print(f"已设置页面URL: {url}")
-                    except Exception as e:
-                        print(f"设置页面URL失败: {e}")
-                        
-                return original_accept_navigation(url, _type, is_main_frame)
-            
-            page.acceptNavigationRequest = custom_accept_navigation
-            
-            # 设置页面的referrer策略
-            try:
-                # 尝试设置referrer策略
-                page.settings().setAttribute(QWebEngineSettings.LocalContentCanAccessRemoteUrls, True)
-                print(f"已启用远程URL访问，referrer: {self.referrer_url}")
-            except Exception as e:
-                print(f"设置referrer策略失败: {e}")
-        
-        # 创建自定义页面
-        page = QWebEnginePage(profile, self.webview)
         
         # 启用JavaScript
         settings = page.settings()
@@ -258,18 +234,6 @@ class RandomWebViewDialog(QDialog):
         
         # 注入脚本，覆盖 navigator/screen/devicePixelRatio 等
         js = """
-        Element.prototype._addEventListener = Element.prototype.addEventListener;
-        Element.prototype.addEventListener = function () {
-            let args = [...arguments]
-            let temp = args[1];
-            args[1] = function () {
-                let args2 = [...arguments];
-                args2[0] = Object.assign({}, args2[0])
-                args2[0].isTrusted = true;
-                return temp(...args2);
-            }
-            return this._addEventListener(...args);
-        }
     
         // 修改 navigator
         Object.defineProperty(navigator, 'platform', { get: () => 'iPhone' });
@@ -323,22 +287,133 @@ class RandomWebViewDialog(QDialog):
         # 设置视口大小
         self.webview.resize(self.device["width"], self.device["height"])
         self.webview.setPage(page)
+    
+    def setup_referrer_interceptor(self, profile):
+        """设置Referer请求拦截器"""
+        from PyQt5.QtWebEngineCore import QWebEngineUrlRequestInterceptor
         
+        class ReferrerInterceptor(QWebEngineUrlRequestInterceptor):
+            def __init__(self, referrer_url):
+                super().__init__()
+                self.referrer_url = referrer_url
+                
+            def interceptRequest(self, info):
+                """拦截请求并添加Referer头"""
+                url = info.requestUrl().toString()
+                print(f"拦截请求: {url}")
+                print(f"添加Referer头: {self.referrer_url}")
+                
+                # 添加Referer头
+                info.setHttpHeader(b"Referer", self.referrer_url.encode())
+                
+                # 也可以添加其他头
+                if self.device and 'user_agent' in self.device:
+                    info.setHttpHeader(b"User-Agent", self.device['user_agent'].encode())
+        
+        # 创建拦截器实例
+        interceptor = ReferrerInterceptor(self.referrer_url)
+        
+        # 设置到profile
+        profile.setUrlRequestInterceptor(interceptor)
+        print("Referer请求拦截器已设置")
+    
+    def check_referrer_effectiveness(self):
+        """检查referrer是否生效"""
+        if not self.referrer_url:
+            return
+            
+        js_code = f"""
+        console.error('=== Referrer检查 ===');
+        console.error('设置的Referer URL: {self.referrer_url}');
+        console.error('document.referrer:', document.referrer);
+        console.error('document.referrer长度:', document.referrer.length);
+        console.error('是否为空:', document.referrer === '');
+        console.error('是否匹配:', document.referrer === '{self.referrer_url}');
+        """
+        
+        self.webview.page().runJavaScript(js_code)
+    
+    def trigger_random_swipes(self):
+        """触发随机滑动3-5次，每次间隔500毫秒"""
+        if not self.page_loaded or not self.device:
+            return
+            
+        # 随机生成滑动次数（3-5次）
+        swipe_count = random.randint(3, 5)
+        print(f"将执行{swipe_count}次随机滑动，每次间隔500毫秒")
+        
+        # 为每次滑动设置延迟，避免同时执行
+        for i in range(swipe_count):
+            delay = i * 500  # 每次滑动间隔500毫秒
+            QTimer.singleShot(delay, lambda idx=i: self.execute_single_swipe(idx + 1, swipe_count))
+    
+    def execute_single_swipe(self, swipe_index, total_swipes):
+        """执行单次滑动"""
+        if not self.page_loaded or not self.device:
+            print("页面未加载完成或设备信息缺失，跳过滑动")
+            return
+            
+        # 生成随机滑动参数 - 只向上滑动
+        start_x = random.randint(100, self.device["width"] - 100)
+        start_y = random.randint(200, self.device["height"] - 100)
+        
+        # 只模拟Y方向向上滑动，X坐标保持不变
+        end_x = start_x
+        end_y = start_y - random.randint(150, 300)  # 向上滑动150-300px
+        
+        # 确保滑动范围在页面内
+        end_y = max(50, end_y)
+        
+        print(f"执行第{swipe_index}/{total_swipes}次滑动: ({start_x}, {start_y}) -> ({end_x}, {end_y})")
+        
+        # 执行滑动
+        self.perform_touch_swipe_js(start_x, start_y, end_x, end_y)
+    
+    def load_with_referrer_header(self):
+        """使用自定义HTTP请求加载URL并设置Referer头"""
+        if not self.url or not self.referrer_url:
+            return
+            
+        try:
+            from PyQt5.QtWebEngineCore import QWebEngineHttpRequest
+            
+            # 创建自定义HTTP请求
+            request = QWebEngineHttpRequest(QUrl(self.url))
+            
+            # 设置Referer头
+            request.setHeader(b"Referer", self.referrer_url.encode())
+            
+            # 设置User-Agent头
+            if self.device and 'user_agent' in self.device:
+                request.setHeader(b"User-Agent", self.device['user_agent'].encode())
+            
+            # 设置其他常用头
+            request.setHeader(b"Accept", b"text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,*/*;q=0.8")
+            request.setHeader(b"Accept-Language", b"zh-CN,zh;q=0.9,en;q=0.8")
+            request.setHeader(b"Accept-Encoding", b"gzip, deflate, br")
+            request.setHeader(b"Connection", b"keep-alive")
+            request.setHeader(b"Upgrade-Insecure-Requests", b"1")
+            
+            print(f"使用自定义请求加载: {self.url}")
+            print(f"Referer头: {self.referrer_url}")
+            
+            # 加载请求
+            self.webview.page().load(request)
+            
+        except Exception as e:
+            print(f"自定义请求加载失败: {e}")
+            # 回退到普通加载
+            self.webview.load(QUrl(self.url))
+    
     def on_load_started(self):
         """页面开始加载"""
         self.setWindowTitle(f"加载中... - {self.device['name'] if self.device else 'Unknown Device'}")
         self.page_loaded = False
         
-        # 提取并存储原始域名
-        if self.url and not self.original_domain:
-            try:
-                from urllib.parse import urlparse
-                parsed_url = urlparse(self.url)
-                self.original_domain = parsed_url.netloc
-                print(f"原始域名: {self.original_domain}")
-            except Exception as e:
-                print(f"解析域名失败: {e}")
-                self.original_domain = None
+        # 记录当前加载的URL
+        current_url = self.webview.url().toString()
+        self.current_loaded_url = current_url
+        print(f"开始加载URL: {current_url}")
         
     def on_load_progress(self, progress):
         """页面加载进度变化"""
@@ -351,15 +426,26 @@ class RandomWebViewDialog(QDialog):
             # 启动定时器
             self.start_auto_behavior()
             
-            # 启动域名检查定时器（3秒后检查）
-            if self.original_domain:
+            # 触发随机滑动
+            self.trigger_random_swipes()
+            
+            # 启动URL检查定时器（3秒后检查）
+            if self.original_url:
                 self.domain_check_timer.start(3000)
-                print(f"域名检查定时器已启动，3秒后检查是否跳转到外部域名")
+                print(f"URL检查定时器已启动，3秒后检查是否跳转到外部URL")
+            
+            # 启动URL变化检查定时器（20秒后检查）
+            self.url_change_timer.start(20000)
+            print(f"URL变化检查定时器已启动，20秒后检查URL是否变化")
         
     def on_load_finished(self, success):
         """页面加载完成"""
         if success:
             self.setWindowTitle(f"WebView - {self.device['name'] if self.device else 'Unknown Device'}")
+            
+            # 检查referrer是否生效
+            if self.referrer_url:
+                self.check_referrer_effectiveness()
         else:
             self.setWindowTitle(f"加载失败 - {self.device['name'] if self.device else 'Unknown Device'}")
             
@@ -370,9 +456,6 @@ class RandomWebViewDialog(QDialog):
             
         # 重置滑动计数
         self.scroll_count = 0
-        
-        # 立即开始第一次滑动
-        self.scroll_timer.start(100)  # 100ms后开始第一次滑动
         
         # 开始随机点击（每5秒一次）
         self.click_timer.start(5000)
@@ -395,7 +478,6 @@ class RandomWebViewDialog(QDialog):
         
     def stop_auto_behavior(self):
         """停止自动行为"""
-        self.scroll_timer.stop()
         self.click_timer.stop()
         
         # 更新按钮状态
@@ -416,327 +498,322 @@ class RandomWebViewDialog(QDialog):
         
     def toggle_auto_behavior(self):
         """切换自动行为状态"""
-        if self.scroll_timer.isActive():
+        if self.click_timer.isActive():
             self.stop_auto_behavior()
         else:
             self.start_auto_behavior()
             
-    def perform_random_scroll(self):
-        """执行随机滑动 - 只模拟Y方向向上滑动，执行3次"""
+    
+    
+    def perform_touch_swipe_js(self, start_x, start_y, end_x, end_y):
+        """通过JavaScript直接滑动页面，同时模拟触摸事件"""
+        import random
+        
+        # 检查页面是否已加载
         if not self.page_loaded:
+            print("页面未加载完成，跳过滑动")
             return
+        
+        # 生成触摸事件ID
+        touch_id = random.randint(1000, 9999)
+        
+        # 计算滑动参数
+        duration = 800  # 滑动持续时间(ms)
+        steps = max(20, int(duration / 40))  # 每40ms一步
+        step_x = (end_x - start_x) / steps
+        step_y = (end_y - start_y) / steps
+        
+        # 通过JavaScript直接滑动页面并模拟触摸事件
+        touch_swipe_js = f"""
+        (function() {{
+            const touchId = {touch_id};
+            const startX = {start_x};
+            const startY = {start_y};
+            const endX = {end_x};
+            const endY = {end_y};
+            const steps = {steps};
+            const stepX = {step_x};
+            const stepY = {step_y};
+            const duration = {duration};
             
-        # 检查是否已达到最大滑动次数
-        if self.scroll_count >= self.max_scroll_count:
-            print(f"已完成{self.max_scroll_count}次滑动，停止滑动")
-            self.scroll_timer.stop()
-            return
+            // 获取起始目标元素
+            const startElement = document.elementFromPoint(startX, startY);
+            if (!startElement) {{
+                console.log('无法找到起始目标元素');
+                return;
+            }}
             
-        # 生成随机滑动参数 - 只向上滑动
-        start_x = random.randint(100, self.device["width"] - 100)
-        start_y = random.randint(200, self.device["height"] - 100)  # 从中间开始
+            // 创建触摸对象属性
+            const createTouchProps = (element, x, y, id) => {{
+                return {{
+                    identifier: id,
+                    target: element,
+                    clientX: x,
+                    clientY: y,
+                    pageX: x,
+                    pageY: y,
+                    screenX: x,
+                    screenY: y,
+                    radiusX: 10,
+                    radiusY: 10,
+                    rotationAngle: 0,
+                    force: 1.0
+                }};
+            }};
+            
+            // 尝试使用TouchEvent，如果失败则使用自定义事件
+            const tryTouchEvent = (type, touches, changedTouches) => {{
+                try {{
+                    const event = new TouchEvent(type, {{
+                        bubbles: true,
+                        cancelable: true,
+                        touches: touches,
+                        targetTouches: touches,
+                        changedTouches: changedTouches
+                    }});
+                    return event;
+                }} catch (e) {{
+                    console.log('TouchEvent不支持，使用自定义事件:', e.message);
+                    const event = new CustomEvent(type, {{
+                        bubbles: true,
+                        cancelable: true
+                    }});
+                    event.touches = touches || [];
+                    event.targetTouches = touches || [];
+                    event.changedTouches = changedTouches || [];
+                    return event;
+                }}
+            }};
+            
+            // 计算滑动距离
+            const scrollDeltaX = endX - startX;
+            const scrollDeltaY = endY - startY;
+            
+            // 触摸开始
+            const touchStart = tryTouchEvent('touchstart', 
+                [createTouchProps(startElement, startX, startY, touchId)], 
+                [createTouchProps(startElement, startX, startY, touchId)]
+            );
+            
+            startElement.dispatchEvent(touchStart);
+            console.log('触摸滑动开始:', startX, startY);
+            
+            // 触摸移动和页面滑动
+            let currentStep = 0;
+            let lastScrollX = 0;
+            let lastScrollY = 0;
+            
+            const moveInterval = setInterval(() => {{
+                currentStep++;
+                const currentX = startX + (stepX * currentStep);
+                const currentY = startY + (stepY * currentStep);
+                
+                // 计算当前滑动进度
+                const progress = currentStep / steps;
+                const currentScrollX = -(scrollDeltaX * progress);
+                const currentScrollY = -(scrollDeltaY * progress);
+                
+                // 计算这一步的滑动增量
+                const deltaX = currentScrollX - lastScrollX;
+                const deltaY = currentScrollY - lastScrollY;
+                
+                // 执行页面滑动
+                if (Math.abs(deltaX) > 0 || Math.abs(deltaY) > 0) {{
+                    window.scrollBy(deltaX, deltaY);
+                    lastScrollX = currentScrollX;
+                    lastScrollY = currentScrollY;
+                }}
+                
+                // 获取当前元素
+                const currentElement = document.elementFromPoint(currentX, currentY);
+                if (currentElement) {{
+                    const touchMove = tryTouchEvent('touchmove',
+                        [createTouchProps(currentElement, currentX, currentY, touchId)],
+                        [createTouchProps(currentElement, currentX, currentY, touchId)]
+                    );
+                    
+                    currentElement.dispatchEvent(touchMove);
+                }}
+                
+                if (currentStep >= steps) {{
+                    clearInterval(moveInterval);
+                    
+                    // 触摸结束
+                    const endElement = document.elementFromPoint(endX, endY);
+                    if (endElement) {{
+                        const touchEnd = tryTouchEvent('touchend',
+                            [],
+                            [createTouchProps(endElement, endX, endY, touchId)]
+                        );
+                        
+                        endElement.dispatchEvent(touchEnd);
+                        console.log('触摸滑动结束:', endX, endY);
+                    }}
+                    
+                    console.log('页面滑动完成，总滑动距离:', scrollDeltaX, scrollDeltaY);
+                }}
+            }}, duration / steps);
+        }})();
+        """
         
-        # 只模拟Y方向向上滑动，X坐标保持不变
-        end_x = start_x
-        end_y = start_y - random.randint(150, 300)  # 向上滑动150-300px
-        
-        # 确保滑动范围在页面内
-        end_y = max(50, end_y)
-        
-        # 执行人性化的平滑滑动
-        self.perform_smooth_swipe(start_x, start_y, end_x, end_y)
-        
-        self.scroll_count += 1
-        print(f"执行第{self.scroll_count}次向上滑动: ({start_x}, {start_y}) -> ({end_x}, {end_y})")
-        
-        # 如果还有滑动次数，设置下次滑动时间为2秒
-        if self.scroll_count < self.max_scroll_count:
-            self.scroll_timer.start(2000)  # 2秒后执行下次滑动
-        else:
-            print(f"滑动完成，共执行{self.max_scroll_count}次")
+        # 执行JavaScript滑动和触摸事件
+        self.webview.page().runJavaScript(touch_swipe_js)
+        print(f"JavaScript滑动和触摸事件已发送: ({start_x}, {start_y}) -> ({end_x}, {end_y})")
     
-    def perform_smooth_swipe(self, start_x, start_y, end_x, end_y):
-        """执行平滑的人性化滑动 - 使用Qt事件实现"""
-        try:
-            from PyQt5.QtCore import QPoint, QTimer
-            from PyQt5.QtGui import QMouseEvent
-            from PyQt5.QtCore import Qt
-            from PyQt5.QtWidgets import QApplication
-            
-            # 计算滑动距离
-            scroll_distance = end_y - start_y
-            
-            print(f"Qt事件滑动: Y方向滚动距离={scroll_distance}px")
-            
-            # 使用Qt鼠标事件来模拟滑动
-            if abs(scroll_distance) > 5:  # 只有足够大的滚动距离才执行
-                # 计算滑动步数
-                scroll_steps = max(8, abs(scroll_distance) // 20)  # 每20px一步，增加步数
-                step_distance = scroll_distance / scroll_steps
-                
-                # 确保webview有焦点
-                self.webview.setFocus()
-                self.webview.activateWindow()
-                
-                # 开始执行滑动
-                self.current_swipe_step = 0
-                self.swipe_steps = scroll_steps
-                self.swipe_start_x = start_x
-                self.swipe_start_y = start_y
-                self.swipe_step_distance = step_distance
-                
-                # 立即执行第一步
-                self.execute_swipe_step()
-                
-                print(f"Qt事件滑动开始: {scroll_steps}步")
-            else:
-                print(f"滚动距离太小，跳过滑动")
-            
-        except Exception as e:
-            print(f"Qt事件滑动失败: {e}")
-            # 回退到简单滑动
-            self.simple_swipe_fallback(start_x, start_y, end_x, end_y)
-    
-    def execute_swipe_step(self):
-        """执行滑动步骤"""
-        try:
-            from PyQt5.QtCore import QPoint, QTimer
-            from PyQt5.QtGui import QMouseEvent
-            from PyQt5.QtCore import Qt
-            from PyQt5.QtWidgets import QApplication
-            
-            if self.current_swipe_step < self.swipe_steps:
-                # 计算当前位置
-                progress = self.current_swipe_step / self.swipe_steps
-                current_x = self.swipe_start_x
-                current_y = self.swipe_start_y + (self.swipe_step_distance * self.current_swipe_step)
-                
-                # 获取全局坐标
-                local_point = QPoint(int(current_x), int(current_y))
-                global_point = self.webview.mapToGlobal(local_point)
-                
-                # 创建鼠标按下事件（如果是第一步）
-                if self.current_swipe_step == 0:
-                    press_event = QMouseEvent(
-                        QMouseEvent.MouseButtonPress,
-                        local_point,
-                        global_point,
-                        Qt.LeftButton,
-                        Qt.LeftButton,
-                        Qt.NoModifier
-                    )
-                    QApplication.sendEvent(self.webview, press_event)
-                    QApplication.processEvents()
-                    print(f"滑动开始: 按下鼠标")
-                
-                # 创建鼠标移动事件
-                move_event = QMouseEvent(
-                    QMouseEvent.MouseMove,
-                    local_point,
-                    global_point,
-                    Qt.LeftButton,  # 保持按下状态
-                    Qt.LeftButton,
-                    Qt.NoModifier
-                )
-                QApplication.sendEvent(self.webview, move_event)
-                QApplication.processEvents()
-                
-                self.current_swipe_step += 1
-                print(f"滑动步骤: {self.current_swipe_step}/{self.swipe_steps}")
-                
-                # 延迟执行下一步
-                QTimer.singleShot(50, self.execute_swipe_step)
-                
-            else:
-                # 滑动完成，释放鼠标
-                final_x = self.swipe_start_x
-                final_y = self.swipe_start_y + (self.swipe_step_distance * self.swipe_steps)
-                
-                local_point = QPoint(int(final_x), int(final_y))
-                global_point = self.webview.mapToGlobal(local_point)
-                
-                release_event = QMouseEvent(
-                    QMouseEvent.MouseButtonRelease,
-                    local_point,
-                    global_point,
-                    Qt.LeftButton,
-                    Qt.NoButton,
-                    Qt.NoModifier
-                )
-                QApplication.sendEvent(self.webview, release_event)
-                QApplication.processEvents()
-                print(f"Qt事件滑动完成: {self.swipe_steps}步")
-                
-        except Exception as e:
-            print(f"执行滑动步骤失败: {e}")
-    
-    def ease_in_out_cubic(self, t):
-        """三次缓动函数，模拟更自然的加速和减速"""
-        if t < 0.5:
-            return 4 * t * t * t
-        else:
-            return 1 - pow(-2 * t + 2, 3) / 2
-    
-    def simple_swipe_fallback(self, start_x, start_y, end_x, end_y):
-        """简单滑动回退方案"""
-        try:
-            # 使用简单的Qt事件作为回退
-            from PyQt5.QtCore import QPoint
-            from PyQt5.QtGui import QMouseEvent
-            from PyQt5.QtCore import Qt
-            from PyQt5.QtWidgets import QApplication
-            
-            start_global = self.webview.mapToGlobal(QPoint(start_x, start_y))
-            end_global = self.webview.mapToGlobal(QPoint(end_x, end_y))
-            
-            # 简化的滑动：移动→按下→移动→释放
-            move_event = QMouseEvent(QMouseEvent.MouseMove, QPoint(start_x, start_y), start_global, Qt.NoButton, Qt.NoButton, Qt.NoModifier)
-            QApplication.sendEvent(self.webview, move_event)
-            
-            press_event = QMouseEvent(QMouseEvent.MouseButtonPress, QPoint(start_x, start_y), start_global, Qt.LeftButton, Qt.LeftButton, Qt.NoModifier)
-            QApplication.sendEvent(self.webview, press_event)
-            
-            time.sleep(0.1)
-            
-            release_event = QMouseEvent(QMouseEvent.MouseButtonRelease, QPoint(end_x, end_y), end_global, Qt.LeftButton, Qt.LeftButton, Qt.NoModifier)
-            QApplication.sendEvent(self.webview, release_event)
-            
-            print(f"回退到简单Qt滑动完成")
-        except Exception as e:
-            print(f"回退滑动也失败: {e}")
+
     
     def perform_webview_click(self, x, y):
-        """在webview内执行点击事件 - 完善的Qt事件方法"""
+        """在webview内执行点击事件 - 使用JavaScript触摸事件"""
         try:
-            print(f"执行点击: 坐标({x}, {y})")
-            
-            from PyQt5.QtCore import QPoint, QTimer
-            from PyQt5.QtGui import QMouseEvent
-            from PyQt5.QtCore import Qt
-            from PyQt5.QtWidgets import QApplication
+            print(f"执行触摸点击: 坐标({x}, {y})")
             
             # 确保webview有焦点并激活
             self.webview.setFocus()
             self.webview.activateWindow()
             self.webview.raise_()
             
-            # 获取webview的本地和全局坐标
-            local_point = QPoint(x, y)
-            global_point = self.webview.mapToGlobal(local_point)
-            
-            # 先移动到目标位置
-            move_event = QMouseEvent(
-                QMouseEvent.MouseMove,
-                local_point,
-                global_point,
-                Qt.NoButton,
-                Qt.NoButton,
-                Qt.NoModifier
-            )
-            
-            # 创建鼠标按下事件
-            press_event = QMouseEvent(
-                QMouseEvent.MouseButtonPress,
-                local_point,
-                global_point,
-                Qt.LeftButton,
-                Qt.LeftButton,
-                Qt.NoModifier
-            )
-            
-            # 创建鼠标释放事件
-            release_event = QMouseEvent(
-                QMouseEvent.MouseButtonRelease,
-                local_point,
-                global_point,
-                Qt.LeftButton,
-                Qt.NoButton,
-                Qt.NoModifier
-            )
-            
-            # 按顺序发送事件，使用多种方法确保事件被处理
-            # 方法1: 直接发送到webview
-            QApplication.sendEvent(self.webview, move_event)
-            QApplication.processEvents()
-            time.sleep(0.05)
-            
-            QApplication.sendEvent(self.webview, press_event)
-            QApplication.processEvents()
-            time.sleep(0.1)
-            
-            QApplication.sendEvent(self.webview, release_event)
-            QApplication.processEvents()
-            
-            # 方法2: 尝试发送到webview的page
-            try:
-                self.webview.page().event(press_event)
-                time.sleep(0.05)
-                self.webview.page().event(release_event)
-                print(f"额外通过page发送事件: ({x}, {y})")
-            except Exception as page_e:
-                print(f"通过page发送事件失败: {page_e}")
-            
-            # 方法3: 尝试发送到webview的focusProxy
-            try:
-                if self.webview.focusProxy():
-                    QApplication.sendEvent(self.webview.focusProxy(), press_event)
-                    time.sleep(0.05)
-                    QApplication.sendEvent(self.webview.focusProxy(), release_event)
-                    print(f"额外通过focusProxy发送事件: ({x}, {y})")
-            except Exception as proxy_e:
-                print(f"通过focusProxy发送事件失败: {proxy_e}")
-            
-            print(f"Qt点击事件序列完成: ({x}, {y})")
+            # 使用JavaScript触摸事件替代Qt鼠标事件
+            self.perform_touch_click_js(x, y)
             
         except Exception as e:
-            print(f"Qt点击失败: {e}")
-            # 回退到传统方法
-            self.fallback_click(x, y)
+            print(f"触摸点击失败: {e}")
     
-    def fallback_click(self, x, y):
-        """回退点击方法"""
-        try:
-            from PyQt5.QtCore import QPoint
-            from PyQt5.QtGui import QMouseEvent
-            from PyQt5.QtCore import Qt
-            from PyQt5.QtWidgets import QApplication
+    def perform_touch_click_js(self, x, y):
+        """使用JavaScript执行触摸点击事件"""
+        import random
+        
+        # 生成触摸事件ID
+        touch_id = random.randint(1000, 9999)
+        
+        # 直接执行触摸点击事件
+        touch_click_js = f"""
+        (function() {{
+            const touchId = {touch_id};
             
-            global_point = self.webview.mapToGlobal(QPoint(x, y))
+            // 直接执行触摸点击事件
+            const targetX = {x};
+            const targetY = {y};
             
-            # 简化的点击事件
-            press_event = QMouseEvent(
-                QMouseEvent.MouseButtonPress,
-                QPoint(x, y),
-                global_point,
-                Qt.LeftButton,
-                Qt.LeftButton,
-                Qt.NoModifier
-            )
+            // 获取目标元素
+            const targetElement = document.elementFromPoint(targetX, targetY);
+            if (!targetElement) {{
+                console.log('无法找到目标元素');
+                return;
+            }}
             
-            release_event = QMouseEvent(
-                QMouseEvent.MouseButtonRelease,
-                QPoint(x, y),
-                global_point,
-                Qt.LeftButton,
-                Qt.LeftButton,
-                Qt.NoModifier
-            )
+            console.log('目标元素:', targetElement);
             
-            QApplication.sendEvent(self.webview, press_event)
-            time.sleep(0.05)
-            QApplication.sendEvent(self.webview, release_event)
+            // 创建触摸对象属性
+            const touchProps = {{
+                identifier: touchId,
+                target: targetElement,
+                clientX: targetX,
+                clientY: targetY,
+                pageX: targetX,
+                pageY: targetY,
+                screenX: targetX,
+                screenY: targetY,
+                radiusX: 10,
+                radiusY: 10,
+                rotationAngle: 0,
+                force: 1.0
+            }};
             
-            print(f"回退点击完成: ({x}, {y})")
-            
-        except Exception as e:
-            print(f"回退点击也失败: {e}")
-            # 最后的回退
-            self.humanized_touch.humanized_click(x, y)
+            // 方法1: 尝试使用TouchEvent（如果支持）
+            try {{
+                // 创建触摸开始事件
+                const touchStart = new TouchEvent('touchstart', {{
+                    bubbles: true,
+                    cancelable: true,
+                    touches: [touchProps],
+                    targetTouches: [touchProps],
+                    changedTouches: [touchProps]
+                }});
+                
+                targetElement.dispatchEvent(touchStart);
+                console.log('TouchEvent触摸开始事件已触发:', targetX, targetY);
+                
+                // 短暂延迟后触发触摸结束事件
+                setTimeout(() => {{
+                    const touchEnd = new TouchEvent('touchend', {{
+                        bubbles: true,
+                        cancelable: true,
+                        touches: [],
+                        targetTouches: [],
+                        changedTouches: [touchProps]
+                    }});
+                    
+                    targetElement.dispatchEvent(touchEnd);
+                    console.log('TouchEvent触摸结束事件已触发:', targetX, targetY);
+                    
+                    // 同时触发click事件以确保兼容性
+                    const clickEvent = new MouseEvent('click', {{
+                        bubbles: true,
+                        cancelable: true,
+                        clientX: targetX,
+                        clientY: targetY,
+                        button: 0,
+                        buttons: 1
+                    }});
+                    
+                    targetElement.dispatchEvent(clickEvent);
+                    console.log('点击事件已触发:', targetX, targetY);
+                }}, {random.randint(50, 150)});
+                
+            }} catch (e) {{
+                console.log('TouchEvent不支持，使用自定义事件:', e.message);
+                
+                // 方法2: 使用自定义事件模拟触摸
+                const createCustomTouchEvent = (type, touches, changedTouches) => {{
+                    const event = new CustomEvent(type, {{
+                        bubbles: true,
+                        cancelable: true
+                    }});
+                    
+                    // 添加触摸属性
+                    event.touches = touches || [];
+                    event.targetTouches = touches || [];
+                    event.changedTouches = changedTouches || [];
+                    
+                    return event;
+                }};
+                
+                // 触发自定义触摸开始事件
+                const customTouchStart = createCustomTouchEvent('touchstart', [touchProps], [touchProps]);
+                targetElement.dispatchEvent(customTouchStart);
+                console.log('自定义触摸开始事件已触发:', targetX, targetY);
+                
+                // 短暂延迟后触发自定义触摸结束事件
+                setTimeout(() => {{
+                    const customTouchEnd = createCustomTouchEvent('touchend', [], [touchProps]);
+                    targetElement.dispatchEvent(customTouchEnd);
+                    console.log('自定义触摸结束事件已触发:', targetX, targetY);
+                    
+                    // 同时触发click事件以确保兼容性
+                    const clickEvent = new MouseEvent('click', {{
+                        bubbles: true,
+                        cancelable: true,
+                        clientX: targetX,
+                        clientY: targetY,
+                        button: 0,
+                        buttons: 1
+                    }});
+                    
+                    targetElement.dispatchEvent(clickEvent);
+                    console.log('点击事件已触发:', targetX, targetY);
+                }}, {random.randint(50, 150)});
+            }}
+        }})();
+        """
+        
+        # 执行JavaScript触摸事件
+        self.webview.page().runJavaScript(touch_click_js)
+        print(f"JavaScript触摸点击事件已发送: ({x}, {y})")
     
     def check_domain_and_redirect(self):
-        """检查当前页面域名，如果跳转到外部域名则回到首页"""
-        if not self.original_domain:
-            print("没有原始域名信息，跳过域名检查")
+        """检查当前页面URL，如果跳转到外部URL则回到原始URL"""
+        if not self.original_url:
+            print("没有原始URL信息，跳过URL检查")
             return
             
         # 获取当前页面URL
@@ -749,32 +826,94 @@ class RandomWebViewDialog(QDialog):
             return
             
         try:
-            from urllib.parse import urlparse
-            parsed_url = urlparse(current_url)
-            current_domain = parsed_url.netloc
+            print(f"当前URL: {current_url}")
+            print(f"原始URL: {self.original_url}")
             
-            print(f"当前域名: {current_domain}, 原始域名: {self.original_domain}")
+            # 标准化URL进行比较（移除协议、www、末尾斜杠等）
+            current_normalized = self.normalize_url(current_url)
+            original_normalized = self.normalize_url(self.original_url)
             
-            # 检查是否跳转到外部域名
-            if current_domain != self.original_domain:
-                print(f"检测到跳转到外部域名: {current_domain} -> {self.original_domain}")
-                print("正在重定向回原始域名首页...")
+            print(f"标准化后 - 当前: {current_normalized}")
+            print(f"标准化后 - 原始: {original_normalized}")
+            
+            # 检查是否跳转到外部URL
+            if current_normalized != original_normalized:
+                print(f"检测到跳转到外部URL，正在重定向回原始URL...")
+                print(f"重定向到: {self.original_url}")
+                self.webview.load(QUrl(self.original_url))
                 
-                # 构建原始域名首页URL
-                original_home_url = f"https://{self.original_domain}/"
-                self.webview.load(QUrl(original_home_url))
-                
-                # 停止域名检查定时器
+                # 停止URL检查定时器
                 self.domain_check_timer.stop()
             else:
-                print("域名未发生变化，继续监控...")
+                print("URL未发生变化，继续监控...")
                 # 继续监控，每10秒检查一次
                 self.domain_check_timer.start(10000)
                 
         except Exception as e:
-            print(f"域名检查出错: {e}")
+            print(f"URL检查出错: {e}")
             # 出错时继续监控
             self.domain_check_timer.start(10000)
+    
+    def normalize_url(self, url):
+        """标准化URL用于比较"""
+        if not url:
+            return ""
+        
+        # 移除协议前缀
+        if url.startswith('https://'):
+            url = url[8:]
+        elif url.startswith('http://'):
+            url = url[7:]
+        
+        # 移除www前缀
+        if url.startswith('www.'):
+            url = url[4:]
+        
+        # 移除末尾的斜杠
+        if url.endswith('/'):
+            url = url[:-1]
+        
+        return url.lower()
+    
+    def check_url_change(self):
+        """检查URL是否在20秒后发生变化，如果未变化则重新加载原始URL"""
+        if not self.original_url or not self.current_loaded_url:
+            print("没有URL信息，跳过URL变化检查")
+            return
+            
+        # 获取当前页面URL
+        self.webview.page().runJavaScript("window.location.href", self.on_url_change_checked)
+    
+    def on_url_change_checked(self, current_url):
+        """处理URL变化检查结果"""
+        if not current_url:
+            print("无法获取当前URL，重新加载原始URL")
+            self.webview.load(QUrl(self.original_url))
+            return
+            
+        try:
+            print(f"URL变化检查 - 当前URL: {current_url}")
+            print(f"URL变化检查 - 加载时URL: {self.current_loaded_url}")
+            
+            # 标准化URL进行比较
+            current_normalized = self.normalize_url(current_url)
+            loaded_normalized = self.normalize_url(self.current_loaded_url)
+            
+            print(f"标准化后 - 当前: {current_normalized}")
+            print(f"标准化后 - 加载时: {loaded_normalized}")
+            
+            # 检查URL是否发生变化
+            if current_normalized == loaded_normalized:
+                print("URL在20秒内未发生变化，重新加载原始URL")
+                print(f"重新加载: {self.original_url}")
+                self.webview.load(QUrl(self.original_url))
+            else:
+                print("URL已发生变化，继续监控")
+                
+        except Exception as e:
+            print(f"URL变化检查出错: {e}")
+            # 出错时重新加载原始URL
+            self.webview.load(QUrl(self.original_url))
         
     def perform_random_click(self):
         """执行随机点击"""
@@ -937,7 +1076,7 @@ class RandomWebViewDialog(QDialog):
     def closeEvent(self, event):
         """关闭事件"""
         # 停止所有定时器
-        self.scroll_timer.stop()
         self.click_timer.stop()
         self.domain_check_timer.stop()
+        self.url_change_timer.stop()
         event.accept()
