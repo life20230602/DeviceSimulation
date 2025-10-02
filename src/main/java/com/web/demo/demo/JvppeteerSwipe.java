@@ -4,12 +4,11 @@ import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.node.ObjectNode;
 import com.ruiyun.jvppeteer.api.core.Browser;
+import com.ruiyun.jvppeteer.api.core.BrowserContext;
 import com.ruiyun.jvppeteer.api.core.Page;
 import com.ruiyun.jvppeteer.api.core.Response;
 import com.ruiyun.jvppeteer.cdp.core.Puppeteer;
-import com.ruiyun.jvppeteer.cdp.entities.GoToOptions;
-import com.ruiyun.jvppeteer.cdp.entities.LaunchOptions;
-import com.ruiyun.jvppeteer.cdp.entities.Viewport;
+import com.ruiyun.jvppeteer.cdp.entities.*;
 
 import java.util.Arrays;
 import java.util.Map;
@@ -62,7 +61,13 @@ public class JvppeteerSwipe {
             ));
 
             Browser browser = Puppeteer.launch(options.build());
-            Page page = browser.newPage();
+            BrowserContextOptions browserContextOptions = new BrowserContextOptions();
+            browserContextOptions.setProxyServer("res.proxy-seller.com:10001");
+            BrowserContext browserContext = browser.createBrowserContext(
+                    browserContextOptions
+            );
+            Page page = browserContext.newPage();
+            page.authenticate(new Credentials("7f6157fcdadd1d9c","tTWX3juE"));
             page._timeoutSettings.setDefaultNavigationTimeout(3000);
             DeviceInfoManagerV2.DeviceInfo device = DeviceInfoManagerV2.getRandomDevice();
             // 设置手机视口大小和移动端配置
@@ -104,7 +109,7 @@ public class JvppeteerSwipe {
                 System.out.println("当前URL: " + page.url());
 
                 //随机滑动次数
-                final int scrollCount = new Random().nextInt( 1) + 3; // 随机1-3次
+                final int scrollCount = new Random().nextInt(1) + 3; // 随机1-3次
                 for (int j = 0; j < scrollCount; j++) {
                     // 执行滑动
                     jvppeteerSwipeUp(page);

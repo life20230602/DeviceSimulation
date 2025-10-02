@@ -224,12 +224,7 @@ public class DeviceInfoManagerV2 {
         device.addUserAgent("quark", "Mozilla/5.0 (Linux; Android " + osVersion + "; " + deviceCode + ") AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.6099.109 Mobile Safari/537.36 Quark/4.0.0.130");
         device.addUserAgent("quark_old", "Mozilla/5.0 (Linux; Android " + osVersion + "; " + deviceCode + ") AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.120 Mobile Safari/537.36 Quark/3.0.0.130");
         device.addUserAgent("quark_new", "Mozilla/5.0 (Linux; Android " + osVersion + "; " + deviceCode + ") AppleWebKit/537.36 (KHTML, like Gecko) Chrome/121.0.6167.140 Mobile Safari/537.36 Quark/4.1.0.130");
-        
-        // Firefox浏览器
-        device.addUserAgent("firefox", "Mozilla/5.0 (Mobile; rv:68.0) Gecko/68.0 Firefox/68.0");
-        device.addUserAgent("firefox_old", "Mozilla/5.0 (Mobile; rv:67.0) Gecko/67.0 Firefox/67.0");
-        device.addUserAgent("firefox_new", "Mozilla/5.0 (Mobile; rv:69.0) Gecko/69.0 Firefox/69.0");
-        
+
         // Edge浏览器
         device.addUserAgent("edge", "Mozilla/5.0 (Linux; Android " + osVersion + "; " + deviceCode + ") AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.6099.109 Mobile Safari/537.36 Edg/120.0.0.0");
         device.addUserAgent("edge_old", "Mozilla/5.0 (Linux; Android " + osVersion + "; " + deviceCode + ") AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.120 Mobile Safari/537.36 Edg/91.0.864.59");

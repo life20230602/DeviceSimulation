@@ -30,11 +30,11 @@
         <java.version>17</java.version>
     </properties>
     <dependencies>
-
+        <!-- https://mvnrepository.com/artifact/com.proxy-seller/proxy-seller-user-api -->
         <dependency>
-            <groupId>com.microsoft.playwright</groupId>
-            <artifactId>playwright</artifactId>
-            <version>1.54.0</version>
+            <groupId>com.proxy-seller</groupId>
+            <artifactId>proxy-seller-user-api</artifactId>
+            <version>1.0</version>
         </dependency>
         
         <!-- jvppeteer依赖 -->
