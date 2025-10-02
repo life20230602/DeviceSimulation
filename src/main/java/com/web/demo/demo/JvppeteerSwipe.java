@@ -9,8 +9,10 @@ import com.ruiyun.jvppeteer.api.core.Page;
 import com.ruiyun.jvppeteer.api.core.Response;
 import com.ruiyun.jvppeteer.cdp.core.Puppeteer;
 import com.ruiyun.jvppeteer.cdp.entities.*;
+import com.ruiyun.jvppeteer.common.Product;
 
 import java.util.Arrays;
+import java.util.List;
 import java.util.Map;
 import java.util.Random;
 
@@ -25,7 +27,7 @@ public class JvppeteerSwipe {
             // 启动jvppeteer浏览器 - 模拟手机设备
             LaunchOptions.Builder options = LaunchOptions.builder();
             options.headless(false);
-            options.args(Arrays.asList(
+            options.args(Arrays.asList( // --incognito 无痕模式
                     "--no-sandbox",
                     "--disable-setuid-sandbox",
                     "--disable-web-security",
@@ -59,41 +61,52 @@ public class JvppeteerSwipe {
                     "--disable-features=PerformanceHints",
                     "--disable-features=PerformanceManager"
             ));
-
             Browser browser = Puppeteer.launch(options.build());
             BrowserContextOptions browserContextOptions = new BrowserContextOptions();
             browserContextOptions.setProxyServer("res.proxy-seller.com:10001");
             BrowserContext browserContext = browser.createBrowserContext(
                     browserContextOptions
             );
-            Page page = browserContext.newPage();
+            List<Page> pages = browser.pages();
+//            Page page = browserContext.newPage();
+            Page page = browser.newPage();
             page.authenticate(new Credentials("7f6157fcdadd1d9c","tTWX3juE"));
             page._timeoutSettings.setDefaultNavigationTimeout(3000);
             DeviceInfoManagerV2.DeviceInfo device = DeviceInfoManagerV2.getRandomDevice();
+            //注入js
+            InjectJs.injectWithDevice(page, device);
+            Thread.sleep(3000);
             // 设置手机视口大小和移动端配置
             Viewport viewport = new Viewport();
             viewport.setWidth(device.getWidth());
             viewport.setHeight(device.getHeight());
-            viewport.setDeviceScaleFactor(1.0);
+            viewport.setDeviceScaleFactor(device.getDeviceScaleFactor());
             viewport.setIsMobile(true);
             viewport.setHasTouch(true);
             page.setViewport(viewport);
             // 设置移动端用户代理
             page.setUserAgent(device.getRandomUserAgent());
-
             // 导航到页面
             try {
+                //关闭默认页
+                if(!pages.isEmpty()){
+                    pages.get(0).close();
+                }
                 System.out.println("开始导航到页面...");
 
                 GoToOptions goToOptions = new GoToOptions();
+                goToOptions.setReferer("http://www.google.com");
                 goToOptions.setTimeout(5000);
-
-                page.goTo("http://test.apiffdsfsafd25.cfd/", goToOptions);
+//                page.goTo("https://test.apiffdsfsafd25.cfd/test_device.html", goToOptions);
+//                page.goTo("https://www.whatismybrowser.com/", goToOptions);
+                page.goTo("https://bot.sannysoft.com", goToOptions);
+//                page.goTo("http://test.apiffdsfsafd25.cfd/", goToOptions);
                 System.out.println("页面导航完成");
                 injectLog(page);
             } catch (Exception e) {
                 System.err.println("页面导航失败: " + e.getMessage());
             }
+
             ClickConfigManager.ClickConfig clickConfig = new ClickConfigManager.ClickConfig(
                     device.getWidth(), device.getHeight()
             );
@@ -101,10 +114,16 @@ public class JvppeteerSwipe {
             // 创建点击位置记录器
             ClickPositionRecorder recorder = new ClickPositionRecorder(device.getWidth(), device.getHeight());
 
-            final int count = new Random().nextInt(11) + 5; // 随机5-15次
+//            final int count = new Random().nextInt(11) + 5; // 随机5-15次
+            final int count = 0;
             System.out.println("开始执行 " + count + " 次操作...");
 
             for (int i = 0; i < count; i++) {
+                // 无法加载网页 关闭
+                if(page.url().contains("chrome-")){
+                    System.out.println("####### 无法加载网页: " + page.url());
+                    break;
+                }
                 System.out.println("=== 第 " + (i + 1) + " 次操作 ===");
                 System.out.println("当前URL: " + page.url());
 
@@ -131,6 +150,7 @@ public class JvppeteerSwipe {
             // 截图
             page.screenshot("jvppeteer_example.png");
             System.out.println("截图已保存: jvppeteer_example.png");
+//            browser.close();
         } catch (Exception e) {
             System.err.println("jvppeteer滑动失败: " + e.getMessage());
             e.printStackTrace();
@@ -209,7 +229,7 @@ public class JvppeteerSwipe {
     /**
      * 执行点击操作并记录位置
      */
-    private static void performClickOperationsWithRecording(Page page, ClickConfigManager.ClickConfig clickConfig, ClickPositionRecorder recorder) {
+    public static void performClickOperationsWithRecording(Page page, ClickConfigManager.ClickConfig clickConfig, ClickPositionRecorder recorder) {
         try {
             System.out.println("开始执行点击操作...");
 
