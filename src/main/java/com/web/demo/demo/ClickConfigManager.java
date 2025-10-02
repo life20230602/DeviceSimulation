@@ -36,17 +36,17 @@ public class ClickConfigManager {
          */
         private void initDefaultGridProbabilities() {
             // 直接写死12行6列的概率值，方便单独修改
-            // 前面两行和最后两行概率为0，中间区域右侧概率高，左侧概率低
+            // 上下高中间低，右边高左边低
             gridProbabilities[0] = new double[]{0.00, 0.00, 0.00, 0.00, 0.00, 0.00}; // 第0行 - 概率为0
             gridProbabilities[1] = new double[]{0.00, 0.00, 0.00, 0.00, 0.00, 0.00}; // 第1行 - 概率为0
-            gridProbabilities[2] = new double[]{0.01, 0.02, 0.03, 0.05, 0.08, 0.10}; // 第2行 - 右侧高
-            gridProbabilities[3] = new double[]{0.02, 0.03, 0.05, 0.08, 0.12, 0.15}; // 第3行 - 右侧高
-            gridProbabilities[4] = new double[]{0.03, 0.05, 0.08, 0.12, 0.18, 0.22}; // 第4行 - 右侧高
-            gridProbabilities[5] = new double[]{0.04, 0.06, 0.10, 0.15, 0.22, 0.28}; // 第5行 - 右侧高
-            gridProbabilities[6] = new double[]{0.04, 0.06, 0.10, 0.15, 0.22, 0.28}; // 第6行 - 右侧高
-            gridProbabilities[7] = new double[]{0.03, 0.05, 0.08, 0.12, 0.18, 0.22}; // 第7行 - 右侧高
-            gridProbabilities[8] = new double[]{0.02, 0.03, 0.05, 0.08, 0.12, 0.15}; // 第8行 - 右侧高
-            gridProbabilities[9] = new double[]{0.01, 0.02, 0.03, 0.05, 0.08, 0.10}; // 第9行 - 右侧高
+            gridProbabilities[2] = new double[]{0.05, 0.08, 0.12, 0.15, 0.18, 0.22}; // 第2行 - 上高，右侧高
+            gridProbabilities[3] = new double[]{0.08, 0.12, 0.15, 0.18, 0.22, 0.25}; // 第3行 - 上高，右侧高
+            gridProbabilities[4] = new double[]{0.02, 0.03, 0.05, 0.08, 0.12, 0.15}; // 第4行 - 中间低，右侧高
+            gridProbabilities[5] = new double[]{0.01, 0.02, 0.03, 0.05, 0.08, 0.10}; // 第5行 - 中间最低，右侧高
+            gridProbabilities[6] = new double[]{0.01, 0.02, 0.03, 0.05, 0.08, 0.10}; // 第6行 - 中间最低，右侧高
+            gridProbabilities[7] = new double[]{0.02, 0.03, 0.05, 0.08, 0.12, 0.15}; // 第7行 - 中间低，右侧高
+            gridProbabilities[8] = new double[]{0.05, 0.08, 0.12, 0.15, 0.18, 0.22}; // 第8行 - 下高，右侧高
+            gridProbabilities[9] = new double[]{0.08, 0.12, 0.15, 0.18, 0.22, 0.25}; // 第9行 - 下高，右侧高
             gridProbabilities[10] = new double[]{0.00, 0.00, 0.00, 0.00, 0.00, 0.00}; // 第10行 - 概率为0
             gridProbabilities[11] = new double[]{0.00, 0.00, 0.00, 0.00, 0.00, 0.00}; // 第11行 - 概率为0
         }
