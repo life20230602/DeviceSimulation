@@ -1,5 +1,8 @@
 package com.web.demo.demo;
 
+import java.io.BufferedReader;
+import java.io.FileReader;
+import java.io.IOException;
 import java.util.*;
 
 /**
@@ -8,14 +11,10 @@ import java.util.*;
  * 每个设备包含多个UserAgent选项
  */
 public class DeviceInfoManagerV2 {
-    
+
     // 设备信息存储
     private static final Map<String, DeviceInfo> DEVICE_INFO_MAP = new HashMap<>();
-    
-    static {
-        initDeviceInfo();
-    }
-    
+
     /**
      * 设备信息类
      */
@@ -31,9 +30,9 @@ public class DeviceInfoManagerV2 {
         private final boolean isMobile;
         private final boolean hasTouch;
         private final Map<String, String> userAgents; // 浏览器类型 -> UserAgent
-        
+
         public DeviceInfo(String deviceName, String brand, String model, String os, String osVersion,
-                         int width, int height, double deviceScaleFactor, boolean isMobile, boolean hasTouch) {
+                          int width, int height, double deviceScaleFactor, boolean isMobile, boolean hasTouch) {
             this.deviceName = deviceName;
             this.brand = brand;
             this.model = model;
@@ -46,386 +45,470 @@ public class DeviceInfoManagerV2 {
             this.hasTouch = hasTouch;
             this.userAgents = new HashMap<>();
         }
-        
+
         // Getters
-        public String getDeviceName() { return deviceName; }
-        public String getBrand() { return brand; }
-        public String getModel() { return model; }
-        public String getOs() { return os; }
-        public String getOsVersion() { return osVersion; }
-        public int getWidth() { return width; }
-        public int getHeight() { return height; }
-        public double getDeviceScaleFactor() { return deviceScaleFactor; }
-        public boolean isMobile() { return isMobile; }
-        public boolean hasTouch() { return hasTouch; }
-        public Map<String, String> getUserAgents() { return userAgents; }
-        
+        public String getDeviceName() {
+            return deviceName;
+        }
+
+        public String getBrand() {
+            return brand;
+        }
+
+        public String getModel() {
+            return model;
+        }
+
+        public String getOs() {
+            return os;
+        }
+
+        public String getOsVersion() {
+            return osVersion;
+        }
+
+        public int getWidth() {
+            return width;
+        }
+
+        public int getHeight() {
+            return height;
+        }
+
+        public double getDeviceScaleFactor() {
+            return deviceScaleFactor;
+        }
+
+        public boolean isMobile() {
+            return isMobile;
+        }
+
+        public boolean hasTouch() {
+            return hasTouch;
+        }
+
+        public Map<String, String> getUserAgents() {
+            return userAgents;
+        }
+
         public void addUserAgent(String browser, String userAgent) {
             userAgents.put(browser, userAgent);
         }
-        
+
         public String getUserAgent(String browser) {
             return userAgents.getOrDefault(browser, userAgents.values().iterator().next());
         }
-        
+
         public String getRandomUserAgent() {
             List<String> uas = new ArrayList<>(userAgents.values());
             return uas.isEmpty() ? "" : uas.get(new Random().nextInt(uas.size()));
         }
-        
+
         public List<String> getAllUserAgents() {
             return new ArrayList<>(userAgents.values());
         }
-        
+
         public Set<String> getAvailableBrowsers() {
             return userAgents.keySet();
         }
-        
+
         @Override
         public String toString() {
-            return String.format("%s (%s %s) - %s %s - %dx%d - %d个UserAgent", 
-                deviceName, brand, model, os, osVersion, width, height, userAgents.size());
+            return String.format("%s (%s %s) - %s %s - %dx%d - %d个UserAgent",
+                    deviceName, brand, model, os, osVersion, width, height, userAgents.size());
         }
     }
-    
+
     /**
      * 初始化设备信息
      */
     private static void initDeviceInfo() {
-        // Android设备
-        initAndroidDevices();
-        // iOS设备
-        initIOSDevices();
+        // 从文件读取UserAgent数据
+        loadUserAgentsFromFile();
     }
-    
-    /**
-     * 初始化Android设备
-     */
-    private static void initAndroidDevices() {
-        // 华为设备
-        addAndroidDevice("huawei_p40", "华为P40", "华为", "P40", "Android", "10", 360, 780, 3.0, "ELS-AN00");
-        addAndroidDevice("huawei_mate40", "华为Mate40", "华为", "Mate40", "Android", "11", 375, 812, 3.0, "TET-AN00");
-        addAndroidDevice("huawei_nova8", "华为Nova8", "华为", "Nova8", "Android", "10", 375, 812, 3.0, "JSC-AN00");
-        addAndroidDevice("huawei_p50", "华为P50", "华为", "P50", "Android", "11", 375, 812, 3.0, "ABR-AL00");
-        
-        // 小米设备
-        addAndroidDevice("xiaomi_mi11", "小米11", "小米", "MI11", "Android", "11", 393, 851, 2.75, "M2011K2C");
-        addAndroidDevice("xiaomi_mi12", "小米12", "小米", "MI12", "Android", "12", 393, 851, 2.75, "2201123C");
-        addAndroidDevice("xiaomi_mi13", "小米13", "小米", "MI13", "Android", "13", 393, 851, 2.75, "2211133C");
-        addAndroidDevice("xiaomi_redmi_note11", "红米Note11", "小米", "Redmi Note11", "Android", "11", 393, 851, 2.75, "2109119DG");
-        addAndroidDevice("xiaomi_redmi_note12", "红米Note12", "小米", "Redmi Note12", "Android", "12", 393, 851, 2.75, "22120RN86C");
-        
-        // 三星设备
-        addAndroidDevice("samsung_s21", "三星S21", "三星", "S21", "Android", "11", 360, 800, 3.0, "SM-G991B");
-        addAndroidDevice("samsung_s22", "三星S22", "三星", "S22", "Android", "12", 360, 800, 3.0, "SM-S906B");
-        addAndroidDevice("samsung_s23", "三星S23", "三星", "S23", "Android", "13", 360, 800, 3.0, "SM-S911B");
-        addAndroidDevice("samsung_note20", "三星Note20", "三星", "Note20", "Android", "11", 360, 800, 3.0, "SM-N981B");
-        
-        // OPPO设备
-        addAndroidDevice("oppo_findx3", "OPPO FindX3", "OPPO", "FindX3", "Android", "11", 375, 812, 3.0, "PEDM00");
-        addAndroidDevice("oppo_reno6", "OPPO Reno6", "OPPO", "Reno6", "Android", "11", 375, 812, 3.0, "PEXM00");
-        addAndroidDevice("oppo_reno7", "OPPO Reno7", "OPPO", "Reno7", "Android", "12", 375, 812, 3.0, "PFJM00");
-        addAndroidDevice("oppo_a95", "OPPO A95", "OPPO", "A95", "Android", "11", 375, 812, 3.0, "PCLM10");
-        
-        // Vivo设备
-        addAndroidDevice("vivo_x70", "Vivo X70", "Vivo", "X70", "Android", "11", 375, 812, 3.0, "V2072A");
-        addAndroidDevice("vivo_x80", "Vivo X80", "Vivo", "X80", "Android", "12", 375, 812, 3.0, "V2185A");
-        addAndroidDevice("vivo_s12", "Vivo S12", "Vivo", "S12", "Android", "11", 375, 812, 3.0, "V2118A");
-        addAndroidDevice("vivo_iqoo8", "Vivo iQOO8", "Vivo", "iQOO8", "Android", "11", 375, 812, 3.0, "V2145A");
-        
-        // 一加设备
-        addAndroidDevice("oneplus_9", "一加9", "一加", "9", "Android", "11", 375, 812, 3.0, "LE2110");
-        addAndroidDevice("oneplus_10", "一加10", "一加", "10", "Android", "12", 375, 812, 3.0, "NE2210");
-        addAndroidDevice("oneplus_11", "一加11", "一加", "11", "Android", "13", 375, 812, 3.0, "PHB110");
-        
-        // Google Pixel设备
-        addAndroidDevice("pixel_6", "Google Pixel 6", "Google", "Pixel 6", "Android", "12", 393, 851, 2.75, "Pixel 6");
-        addAndroidDevice("pixel_7", "Google Pixel 7", "Google", "Pixel 7", "Android", "13", 393, 851, 2.75, "Pixel 7");
-        addAndroidDevice("pixel_8", "Google Pixel 8", "Google", "Pixel 8", "Android", "14", 393, 851, 2.75, "Pixel 8");
-        
-        // 魅族设备
-        addAndroidDevice("meizu_18", "魅族18", "魅族", "18", "Android", "11", 375, 812, 3.0, "M182Q");
-        addAndroidDevice("meizu_18s", "魅族18s", "魅族", "18s", "Android", "11", 375, 812, 3.0, "M1872");
-        
-        // 联想设备
-        addAndroidDevice("lenovo_z6", "联想Z6", "联想", "Z6", "Android", "11", 375, 812, 3.0, "L78051");
-        addAndroidDevice("lenovo_z6_pro", "联想Z6 Pro", "联想", "Z6 Pro", "Android", "11", 375, 812, 3.0, "L78052");
-        
-        // 荣耀设备
-        addAndroidDevice("honor_50", "荣耀50", "荣耀", "50", "Android", "11", 375, 812, 3.0, "NTH-AN00");
-        addAndroidDevice("honor_magic3", "荣耀Magic3", "荣耀", "Magic3", "Android", "11", 375, 812, 3.0, "ELZ-AN00");
-        addAndroidDevice("honor_v40", "荣耀V40", "荣耀", "V40", "Android", "10", 375, 812, 3.0, "YOK-AN10");
-    }
-    
-    /**
-     * 初始化iOS设备
-     */
-    private static void initIOSDevices() {
-        // iPhone 15系列
-        addIOSDevice("iphone_15", "iPhone 15", "Apple", "iPhone 15", "iOS", "17", 393, 852, 3.0, "17_0");
-        addIOSDevice("iphone_15_pro", "iPhone 15 Pro", "Apple", "iPhone 15 Pro", "iOS", "17", 393, 852, 3.0, "17_0");
-        addIOSDevice("iphone_15_plus", "iPhone 15 Plus", "Apple", "iPhone 15 Plus", "iOS", "17", 428, 926, 3.0, "17_0");
-        addIOSDevice("iphone_15_pro_max", "iPhone 15 Pro Max", "Apple", "iPhone 15 Pro Max", "iOS", "17", 428, 926, 3.0, "17_0");
-        
-        // iPhone 14系列
-        addIOSDevice("iphone_14", "iPhone 14", "Apple", "iPhone 14", "iOS", "16", 390, 844, 3.0, "16_0");
-        addIOSDevice("iphone_14_pro", "iPhone 14 Pro", "Apple", "iPhone 14 Pro", "iOS", "16", 393, 852, 3.0, "16_0");
-        addIOSDevice("iphone_14_plus", "iPhone 14 Plus", "Apple", "iPhone 14 Plus", "iOS", "16", 428, 926, 3.0, "16_0");
-        addIOSDevice("iphone_14_pro_max", "iPhone 14 Pro Max", "Apple", "iPhone 14 Pro Max", "iOS", "16", 428, 926, 3.0, "16_0");
-        
-        // iPhone 13系列
-        addIOSDevice("iphone_13", "iPhone 13", "Apple", "iPhone 13", "iOS", "15", 390, 844, 3.0, "15_0");
-        addIOSDevice("iphone_13_pro", "iPhone 13 Pro", "Apple", "iPhone 13 Pro", "iOS", "15", 390, 844, 3.0, "15_0");
-        addIOSDevice("iphone_13_mini", "iPhone 13 mini", "Apple", "iPhone 13 mini", "iOS", "15", 375, 812, 3.0, "15_0");
-        addIOSDevice("iphone_13_pro_max", "iPhone 13 Pro Max", "Apple", "iPhone 13 Pro Max", "iOS", "15", 428, 926, 3.0, "15_0");
-        
-        // iPhone 12系列
-        addIOSDevice("iphone_12", "iPhone 12", "Apple", "iPhone 12", "iOS", "14", 390, 844, 3.0, "14_7_1");
-        addIOSDevice("iphone_12_pro", "iPhone 12 Pro", "Apple", "iPhone 12 Pro", "iOS", "14", 390, 844, 3.0, "14_7_1");
-        addIOSDevice("iphone_12_mini", "iPhone 12 mini", "Apple", "iPhone 12 mini", "iOS", "14", 375, 812, 3.0, "14_7_1");
-        addIOSDevice("iphone_12_pro_max", "iPhone 12 Pro Max", "Apple", "iPhone 12 Pro Max", "iOS", "14", 428, 926, 3.0, "14_7_1");
-        
-        // iPhone 11系列
-        addIOSDevice("iphone_11", "iPhone 11", "Apple", "iPhone 11", "iOS", "13", 414, 896, 2.0, "13_7");
-        addIOSDevice("iphone_11_pro", "iPhone 11 Pro", "Apple", "iPhone 11 Pro", "iOS", "13", 375, 812, 3.0, "13_7");
-        addIOSDevice("iphone_11_pro_max", "iPhone 11 Pro Max", "Apple", "iPhone 11 Pro Max", "iOS", "13", 414, 896, 3.0, "13_7");
-        
-        // iPhone SE系列
-        addIOSDevice("iphone_se2", "iPhone SE 2", "Apple", "iPhone SE 2", "iOS", "14", 375, 667, 2.0, "14_7_1");
-        addIOSDevice("iphone_se3", "iPhone SE 3", "Apple", "iPhone SE 3", "iOS", "15", 375, 667, 2.0, "15_4_1");
-        
-        // iPhone XS系列
-        addIOSDevice("iphone_xs", "iPhone XS", "Apple", "iPhone XS", "iOS", "12", 375, 812, 3.0, "12_5_5");
-        addIOSDevice("iphone_xs_max", "iPhone XS Max", "Apple", "iPhone XS Max", "iOS", "12", 414, 896, 3.0, "12_5_5");
-        addIOSDevice("iphone_xr", "iPhone XR", "Apple", "iPhone XR", "iOS", "12", 414, 896, 2.0, "12_5_5");
-    }
-    
-    /**
-     * 添加Android设备
-     */
-    private static void addAndroidDevice(String key, String deviceName, String brand, String model, 
-                                       String os, String osVersion, int width, int height, 
-                                       double deviceScaleFactor, String deviceCode) {
-        DeviceInfo device = new DeviceInfo(deviceName, brand, model, os, osVersion, 
-                                         width, height, deviceScaleFactor, true, true);
-        
-        // Chrome浏览器 - 多个版本
-        device.addUserAgent("chrome", "Mozilla/5.0 (Linux; Android " + osVersion + "; " + deviceCode + ") AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.6099.109 Mobile Safari/537.36");
-        device.addUserAgent("chrome_old", "Mozilla/5.0 (Linux; Android " + osVersion + "; " + deviceCode + ") AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.120 Mobile Safari/537.36");
-        device.addUserAgent("chrome_new", "Mozilla/5.0 (Linux; Android " + osVersion + "; " + deviceCode + ") AppleWebKit/537.36 (KHTML, like Gecko) Chrome/121.0.6167.140 Mobile Safari/537.36");
-        device.addUserAgent("chrome_beta", "Mozilla/5.0 (Linux; Android " + osVersion + "; " + deviceCode + ") AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.6261.64 Mobile Safari/537.36");
-        
-        // UC浏览器 - 多个版本
-        device.addUserAgent("uc", "Mozilla/5.0 (Linux; Android " + osVersion + "; " + deviceCode + ") AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.6099.109 Mobile Safari/537.36 UCBrowser/15.0.0.1306");
-        device.addUserAgent("uc_old", "Mozilla/5.0 (Linux; Android " + osVersion + "; " + deviceCode + ") AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.120 Mobile Safari/537.36 UCBrowser/13.4.0.1306");
-        device.addUserAgent("uc_new", "Mozilla/5.0 (Linux; Android " + osVersion + "; " + deviceCode + ") AppleWebKit/537.36 (KHTML, like Gecko) Chrome/121.0.6167.140 Mobile Safari/537.36 UCBrowser/15.1.0.1306");
-        
-        // 夸克浏览器 - 多个版本
-        device.addUserAgent("quark", "Mozilla/5.0 (Linux; Android " + osVersion + "; " + deviceCode + ") AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.6099.109 Mobile Safari/537.36 Quark/4.0.0.130");
-        device.addUserAgent("quark_old", "Mozilla/5.0 (Linux; Android " + osVersion + "; " + deviceCode + ") AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.120 Mobile Safari/537.36 Quark/3.0.0.130");
-        device.addUserAgent("quark_new", "Mozilla/5.0 (Linux; Android " + osVersion + "; " + deviceCode + ") AppleWebKit/537.36 (KHTML, like Gecko) Chrome/121.0.6167.140 Mobile Safari/537.36 Quark/4.1.0.130");
 
-        // Edge浏览器
-        device.addUserAgent("edge", "Mozilla/5.0 (Linux; Android " + osVersion + "; " + deviceCode + ") AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.6099.109 Mobile Safari/537.36 Edg/120.0.0.0");
-        device.addUserAgent("edge_old", "Mozilla/5.0 (Linux; Android " + osVersion + "; " + deviceCode + ") AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.120 Mobile Safari/537.36 Edg/91.0.864.59");
-        
-        // Opera浏览器
-        device.addUserAgent("opera", "Mozilla/5.0 (Linux; Android " + osVersion + "; " + deviceCode + ") AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.6099.109 Mobile Safari/537.36 OPR/106.0.0.0");
-        device.addUserAgent("opera_old", "Mozilla/5.0 (Linux; Android " + osVersion + "; " + deviceCode + ") AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.120 Mobile Safari/537.36 OPR/77.0.4054.277");
-        
-        // 百度浏览器
-        device.addUserAgent("baidu", "Mozilla/5.0 (Linux; Android " + osVersion + "; " + deviceCode + ") AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.6099.109 Mobile Safari/537.36 baiduboxapp/12.0.0.10");
 
-        DEVICE_INFO_MAP.put(key, device);
-    }
-    
-    /**
-     * 添加iOS设备
-     */
-    private static void addIOSDevice(String key, String deviceName, String brand, String model, 
-                                   String os, String osVersion, int width, int height, 
-                                   double deviceScaleFactor, String iosVersion) {
-        DeviceInfo device = new DeviceInfo(deviceName, brand, model, os, osVersion, 
-                                         width, height, deviceScaleFactor, true, true);
-        
-        // Safari浏览器 - 多个版本
-        device.addUserAgent("safari", "Mozilla/5.0 (iPhone; CPU iPhone OS " + iosVersion + " like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/" + osVersion + ".0 Mobile/15E148 Safari/604.1");
-        device.addUserAgent("safari_old", "Mozilla/5.0 (iPhone; CPU iPhone OS " + iosVersion + " like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/" + (Integer.parseInt(osVersion) - 1) + ".0 Mobile/15E148 Safari/604.1");
-        device.addUserAgent("safari_new", "Mozilla/5.0 (iPhone; CPU iPhone OS " + iosVersion + " like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/" + (Integer.parseInt(osVersion) + 1) + ".0 Mobile/15E148 Safari/604.1");
-        
-        // Chrome浏览器 - 多个版本
-        device.addUserAgent("chrome", "Mozilla/5.0 (iPhone; CPU iPhone OS " + iosVersion + " like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) CriOS/120.0.6099.109 Mobile/15E148 Safari/604.1");
-        device.addUserAgent("chrome_old", "Mozilla/5.0 (iPhone; CPU iPhone OS " + iosVersion + " like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) CriOS/91.0.4472.120 Mobile/15E148 Safari/604.1");
-        device.addUserAgent("chrome_new", "Mozilla/5.0 (iPhone; CPU iPhone OS " + iosVersion + " like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) CriOS/121.0.6167.140 Mobile/15E148 Safari/604.1");
-        
-        // UC浏览器 - 多个版本
-        device.addUserAgent("uc", "Mozilla/5.0 (iPhone; CPU iPhone OS " + iosVersion + " like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/" + osVersion + ".0 Mobile/15E148 Safari/604.1 UCBrowser/15.0.0.1306");
-        device.addUserAgent("uc_old", "Mozilla/5.0 (iPhone; CPU iPhone OS " + iosVersion + " like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/" + (Integer.parseInt(osVersion) - 1) + ".0 Mobile/15E148 Safari/604.1 UCBrowser/13.4.0.1306");
-        device.addUserAgent("uc_new", "Mozilla/5.0 (iPhone; CPU iPhone OS " + iosVersion + " like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/" + (Integer.parseInt(osVersion) + 1) + ".0 Mobile/15E148 Safari/604.1 UCBrowser/15.1.0.1306");
-        
-        // 夸克浏览器 - 多个版本
-        device.addUserAgent("quark", "Mozilla/5.0 (iPhone; CPU iPhone OS " + iosVersion + " like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/" + osVersion + ".0 Mobile/15E148 Safari/604.1 Quark/4.0.0.130");
-        device.addUserAgent("quark_old", "Mozilla/5.0 (iPhone; CPU iPhone OS " + iosVersion + " like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/" + (Integer.parseInt(osVersion) - 1) + ".0 Mobile/15E148 Safari/604.1 Quark/3.0.0.130");
-        device.addUserAgent("quark_new", "Mozilla/5.0 (iPhone; CPU iPhone OS " + iosVersion + " like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/" + (Integer.parseInt(osVersion) + 1) + ".0 Mobile/15E148 Safari/604.1 Quark/4.1.0.130");
-        
-        // Firefox浏览器
-        device.addUserAgent("firefox", "Mozilla/5.0 (iPhone; CPU iPhone OS " + iosVersion + " like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) FxiOS/120.0 Mobile/15E148 Safari/605.1.15");
-        device.addUserAgent("firefox_old", "Mozilla/5.0 (iPhone; CPU iPhone OS " + iosVersion + " like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) FxiOS/91.0 Mobile/15E148 Safari/605.1.15");
-        device.addUserAgent("firefox_new", "Mozilla/5.0 (iPhone; CPU iPhone OS " + iosVersion + " like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) FxiOS/121.0 Mobile/15E148 Safari/605.1.15");
-        
-        // Edge浏览器
-        device.addUserAgent("edge", "Mozilla/5.0 (iPhone; CPU iPhone OS " + iosVersion + " like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/" + osVersion + ".0 Mobile/15E148 Safari/604.1 EdgiOS/120.0.0.0");
-        device.addUserAgent("edge_old", "Mozilla/5.0 (iPhone; CPU iPhone OS " + iosVersion + " like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/" + (Integer.parseInt(osVersion) - 1) + ".0 Mobile/15E148 Safari/604.1 EdgiOS/91.0.864.59");
-        
-        // Opera浏览器
-        device.addUserAgent("opera", "Mozilla/5.0 (iPhone; CPU iPhone OS " + iosVersion + " like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/" + osVersion + ".0 Mobile/15E148 Safari/604.1 OPiOS/106.0.0.0");
-        device.addUserAgent("opera_old", "Mozilla/5.0 (iPhone; CPU iPhone OS " + iosVersion + " like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/" + (Integer.parseInt(osVersion) - 1) + ".0 Mobile/15E148 Safari/604.1 OPiOS/77.0.4054.277");
-
-        DEVICE_INFO_MAP.put(key, device);
-    }
-    
     // ========== 公共方法 ==========
-    
-    /**
-     * 根据设备键获取设备信息
-     */
-    public static DeviceInfo getDeviceInfo(String deviceKey) {
-        return DEVICE_INFO_MAP.get(deviceKey);
-    }
-    
-    /**
-     * 获取所有设备信息
-     */
-    public static Map<String, DeviceInfo> getAllDevices() {
-        return new HashMap<>(DEVICE_INFO_MAP);
-    }
-    
-    /**
-     * 根据品牌获取设备列表
-     */
-    public static List<DeviceInfo> getDevicesByBrand(String brand) {
-        return DEVICE_INFO_MAP.values().stream()
-                .filter(device -> device.getBrand().equalsIgnoreCase(brand))
-                .collect(ArrayList::new, ArrayList::add, ArrayList::addAll);
-    }
-    
-    /**
-     * 根据操作系统获取设备列表
-     */
-    public static List<DeviceInfo> getDevicesByOS(String os) {
-        return DEVICE_INFO_MAP.values().stream()
-                .filter(device -> device.getOs().equalsIgnoreCase(os))
-                .collect(ArrayList::new, ArrayList::add, ArrayList::addAll);
-    }
-    
-    /**
-     * 根据屏幕尺寸获取设备列表
-     */
-    public static List<DeviceInfo> getDevicesByScreenSize(int width, int height) {
-        return DEVICE_INFO_MAP.values().stream()
-                .filter(device -> device.getWidth() == width && device.getHeight() == height)
-                .collect(ArrayList::new, ArrayList::add, ArrayList::addAll);
-    }
-    
+
     /**
      * 获取随机设备信息
      */
     public static DeviceInfo getRandomDevice() {
-        List<DeviceInfo> devices = new ArrayList<>(DEVICE_INFO_MAP.values());
-        return devices.get(new Random().nextInt(devices.size()));
-    }
-    
-    /**
-     * 根据操作系统获取随机设备
-     */
-    public static DeviceInfo getRandomDeviceByOS(String os) {
-        List<DeviceInfo> devices = getDevicesByOS(os);
-        return devices.isEmpty() ? null : devices.get(new Random().nextInt(devices.size()));
-    }
-    
-    /**
-     * 根据品牌获取随机设备
-     */
-    public static DeviceInfo getRandomDeviceByBrand(String brand) {
-        List<DeviceInfo> devices = getDevicesByBrand(brand);
-        return devices.isEmpty() ? null : devices.get(new Random().nextInt(devices.size()));
-    }
-    
-    /**
-     * 获取设备键列表
-     */
-    public static Set<String> getDeviceKeys() {
-        return DEVICE_INFO_MAP.keySet();
-    }
-    
-    /**
-     * 打印所有设备信息
-     */
-    public static void printAllDevices() {
-        System.out.println("=== 设备信息列表 ===");
-        DEVICE_INFO_MAP.forEach((key, device) -> {
-            System.out.println(key + ": " + device);
-            System.out.println("  支持的浏览器: " + device.getAvailableBrowsers());
-        });
-    }
-    
-    /**
-     * 打印设备统计信息
-     */
-    public static void printDeviceStats() {
-        System.out.println("=== 设备统计信息 ===");
-        System.out.println("总设备数量: " + DEVICE_INFO_MAP.size());
-        
-        Map<String, Long> brandCount = DEVICE_INFO_MAP.values().stream()
-                .collect(java.util.stream.Collectors.groupingBy(DeviceInfo::getBrand, java.util.stream.Collectors.counting()));
-        System.out.println("品牌分布: " + brandCount);
-        
-        Map<String, Long> osCount = DEVICE_INFO_MAP.values().stream()
-                .collect(java.util.stream.Collectors.groupingBy(DeviceInfo::getOs, java.util.stream.Collectors.counting()));
-        System.out.println("操作系统分布: " + osCount);
-        
-        int totalUserAgents = DEVICE_INFO_MAP.values().stream()
-                .mapToInt(device -> device.getUserAgents().size())
-                .sum();
-        System.out.println("总UserAgent数量: " + totalUserAgents);
-        System.out.println("平均每设备UserAgent数量: " + (totalUserAgents / DEVICE_INFO_MAP.size()));
-    }
-    
-    /**
-     * 测试方法
-     */
-    public static void main(String[] args) {
-        System.out.println("=== 设备信息管理类 V2 测试 ===\n");
-        
-        // 打印统计信息
-        printDeviceStats();
-        
-        System.out.println("\n=== 测试特定设备 ===");
-        DeviceInfo huaweiP40 = getDeviceInfo("huawei_p40");
-        if (huaweiP40 != null) {
-            System.out.println("设备: " + huaweiP40);
-            System.out.println("Chrome UserAgent: " + huaweiP40.getUserAgent("chrome"));
-            System.out.println("随机UserAgent: " + huaweiP40.getRandomUserAgent());
-            System.out.println("所有UserAgent数量: " + huaweiP40.getAllUserAgents().size());
-            System.out.println("支持的浏览器: " + huaweiP40.getAvailableBrowsers());
+        if(USER_AGENTS_BY_BRAND.isEmpty()){
+            initDeviceInfo();;
         }
-        
-        System.out.println("\n=== 测试随机设备 ===");
-        DeviceInfo randomDevice = getRandomDevice();
-        System.out.println("随机设备: " + randomDevice);
-        System.out.println("随机UserAgent: " + randomDevice.getRandomUserAgent());
-        
-        System.out.println("\n=== 测试品牌筛选 ===");
-        List<DeviceInfo> huaweiDevices = getDevicesByBrand("华为");
-        System.out.println("华为设备数量: " + huaweiDevices.size());
-        huaweiDevices.forEach(device -> System.out.println("  " + device));
-        
-        System.out.println("\n=== 测试操作系统筛选 ===");
-        List<DeviceInfo> androidDevices = getDevicesByOS("Android");
-        System.out.println("Android设备数量: " + androidDevices.size());
-        List<DeviceInfo> iosDevices = getDevicesByOS("iOS");
-        System.out.println("iOS设备数量: " + iosDevices.size());
-        
-        System.out.println("\n=== 测试完成 ===");
+        return getRandomExtractedDevice();
+    }
+
+    // UserAgent 存储
+    private static final Map<String, List<String>> USER_AGENTS_BY_BRAND = new HashMap<>();
+    private static final Map<String, List<String>> USER_AGENTS_BY_OS = new HashMap<>();
+
+    // 从UserAgent提取的设备信息存储
+    private static final List<DeviceInfo> EXTRACTED_DEVICES = new ArrayList<>();
+
+    // 静态初始化标志
+    private static boolean userAgentsLoaded = false;
+
+    /**
+     * 从文件加载UserAgent数据
+     */
+    private static void loadUserAgentsFromFile() {
+        if (userAgentsLoaded) {
+            return; // 已经加载过了
+        }
+
+        String fileName = "mobile_useragents_deduplicated.txt";
+        try (BufferedReader reader = new BufferedReader(new FileReader(fileName))) {
+            String line;
+            int totalCount = 0;
+
+            System.out.println("开始从文件加载UserAgent数据...");
+
+            while ((line = reader.readLine()) != null) {
+                line = line.trim();
+                if (!line.isEmpty()) {
+                    totalCount++;
+                    categorizeUserAgent(line);
+
+                    if (totalCount % 5000 == 0) {
+                        System.out.println("已处理 " + totalCount + " 个UserAgent...");
+                    }
+                }
+            }
+
+            System.out.println("总共加载 " + totalCount + " 个UserAgent");
+            printUserAgentStats();
+
+            // 从UserAgent提取设备信息
+            extractDevicesFromUserAgents();
+
+            userAgentsLoaded = true;
+
+        } catch (IOException e) {
+            System.err.println("加载UserAgent文件失败: " + e.getMessage());
+            e.printStackTrace();
+            // 即使文件加载失败，也标记为已加载，避免重复尝试
+            userAgentsLoaded = true;
+        }
+    }
+
+    /**
+     * 分类UserAgent
+     */
+    private static void categorizeUserAgent(String userAgent) {
+        if (userAgent == null || userAgent.trim().isEmpty()) {
+            return;
+        }
+
+        String lowerUA = userAgent.toLowerCase();
+
+        // 按品牌分类
+        if (lowerUA.contains("huawei") || lowerUA.contains("honor")) {
+            USER_AGENTS_BY_BRAND.computeIfAbsent("华为", k -> new ArrayList<>()).add(userAgent);
+        } else if (lowerUA.contains("xiaomi") || lowerUA.contains("redmi")) {
+            USER_AGENTS_BY_BRAND.computeIfAbsent("小米", k -> new ArrayList<>()).add(userAgent);
+        } else if (lowerUA.contains("vivo")) {
+            USER_AGENTS_BY_BRAND.computeIfAbsent("Vivo", k -> new ArrayList<>()).add(userAgent);
+        } else if (lowerUA.contains("oppo") || lowerUA.contains("oneplus")) {
+            USER_AGENTS_BY_BRAND.computeIfAbsent("OPPO", k -> new ArrayList<>()).add(userAgent);
+        } else if (lowerUA.contains("samsung")) {
+            USER_AGENTS_BY_BRAND.computeIfAbsent("Samsung", k -> new ArrayList<>()).add(userAgent);
+        } else if (lowerUA.contains("meizu")) {
+            USER_AGENTS_BY_BRAND.computeIfAbsent("Meizu", k -> new ArrayList<>()).add(userAgent);
+        } else if (lowerUA.contains("lenovo")) {
+            USER_AGENTS_BY_BRAND.computeIfAbsent("Lenovo", k -> new ArrayList<>()).add(userAgent);
+        } else if (lowerUA.contains("google") || lowerUA.contains("pixel")) {
+            USER_AGENTS_BY_BRAND.computeIfAbsent("Google", k -> new ArrayList<>()).add(userAgent);
+        }
+
+        // 按操作系统分类
+        if (lowerUA.contains("android")) {
+            USER_AGENTS_BY_OS.computeIfAbsent("Android", k -> new ArrayList<>()).add(userAgent);
+        } else if (lowerUA.contains("iphone") || lowerUA.contains("ipad") || lowerUA.contains("ipod")) {
+            USER_AGENTS_BY_OS.computeIfAbsent("iOS", k -> new ArrayList<>()).add(userAgent);
+        }
+    }
+
+    /**
+     * 打印UserAgent统计信息
+     */
+    private static void printUserAgentStats() {
+        System.out.println("\n=== UserAgent 统计 ===");
+        System.out.println("按品牌分类:");
+        USER_AGENTS_BY_BRAND.forEach((brand, uas) ->
+                System.out.println("  " + brand + ": " + uas.size() + " 个"));
+
+        System.out.println("\n按操作系统分类:");
+        USER_AGENTS_BY_OS.forEach((os, uas) ->
+                System.out.println("  " + os + ": " + uas.size() + " 个"));
+    }
+
+    /**
+     * 检测浏览器类型
+     */
+    private static String detectBrowserType(String userAgent) {
+        String lowerUA = userAgent.toLowerCase();
+
+        if (lowerUA.contains("chrome")) {
+            return "chrome";
+        } else if (lowerUA.contains("safari") && !lowerUA.contains("chrome")) {
+            return "safari";
+        } else if (lowerUA.contains("ucbrowser") || lowerUA.contains("uc browser")) {
+            return "uc";
+        } else if (lowerUA.contains("quark")) {
+            return "quark";
+        } else if (lowerUA.contains("firefox")) {
+            return "firefox";
+        } else if (lowerUA.contains("edge")) {
+            return "edge";
+        } else if (lowerUA.contains("opera")) {
+            return "opera";
+        } else if (lowerUA.contains("baiduboxapp")) {
+            return "baidu";
+        } else if (lowerUA.contains("qq/")) {
+            return "qq";
+        } else if (lowerUA.contains("micromessenger")) {
+            return "wechat";
+        } else {
+            return "chrome"; // 默认返回chrome
+        }
+    }
+
+    /**
+     * 从UserAgent提取设备信息
+     */
+    private static void extractDevicesFromUserAgents() {
+        System.out.println("\n开始从UserAgent提取设备信息...");
+
+        // 从每个品牌的UserAgent中提取设备信息
+        for (Map.Entry<String, List<String>> entry : USER_AGENTS_BY_BRAND.entrySet()) {
+            String brand = entry.getKey();
+            List<String> userAgents = entry.getValue();
+
+            // 为每个品牌提取最多20个不同的设备
+            Set<String> processedDevices = new HashSet<>();
+            int deviceCount = 0;
+
+            for (String userAgent : userAgents) {
+                if (deviceCount >= 20) break; // 每个品牌最多20个设备
+
+                DeviceInfo deviceInfo = extractDeviceFromUserAgent(userAgent, brand);
+                if (deviceInfo != null) {
+                    String deviceKey = deviceInfo.getBrand() + "_" + deviceInfo.getModel() + "_" + deviceInfo.getOsVersion();
+                    if (!processedDevices.contains(deviceKey)) {
+                        processedDevices.add(deviceKey);
+                        EXTRACTED_DEVICES.add(deviceInfo);
+                        deviceCount++;
+                    }
+                }
+            }
+
+            System.out.println("从 " + brand + " 提取了 " + deviceCount + " 个设备");
+        }
+
+        System.out.println("总共提取了 " + EXTRACTED_DEVICES.size() + " 个设备");
+    }
+
+    /**
+     * 从单个UserAgent提取设备信息
+     */
+    private static DeviceInfo extractDeviceFromUserAgent(String userAgent, String brand) {
+        try {
+            String lowerUA = userAgent.toLowerCase();
+
+            // 提取操作系统和版本
+            String os = "Unknown";
+            String osVersion = "Unknown";
+            int width = 375; // 默认宽度
+            int height = 667; // 默认高度
+            double deviceScaleFactor = 2.0; // 默认缩放
+
+            if (lowerUA.contains("android")) {
+                os = "Android";
+                // 提取Android版本
+                if (lowerUA.contains("android 14")) {
+                    osVersion = "14";
+                } else if (lowerUA.contains("android 13")) {
+                    osVersion = "13";
+                } else if (lowerUA.contains("android 12")) {
+                    osVersion = "12";
+                } else if (lowerUA.contains("android 11")) {
+                    osVersion = "11";
+                } else if (lowerUA.contains("android 10")) {
+                    osVersion = "10";
+                } else if (lowerUA.contains("android 9")) {
+                    osVersion = "9";
+                } else if (lowerUA.contains("android 8")) {
+                    osVersion = "8";
+                } else {
+                    osVersion = "11"; // 默认版本
+                }
+
+                // 根据品牌设置不同的屏幕尺寸
+                if (brand.equals("华为") || brand.equals("Honor")) {
+                    width = 360;
+                    height = 780;
+                    deviceScaleFactor = 3.0;
+                } else if (brand.equals("小米")) {
+                    width = 393;
+                    height = 851;
+                    deviceScaleFactor = 2.75;
+                } else if (brand.equals("Vivo")) {
+                    width = 360;
+                    height = 760;
+                    deviceScaleFactor = 3.0;
+                } else if (brand.equals("OPPO")) {
+                    width = 375;
+                    height = 812;
+                    deviceScaleFactor = 3.0;
+                } else if (brand.equals("Samsung")) {
+                    width = 360;
+                    height = 740;
+                    deviceScaleFactor = 3.0;
+                }
+
+            } else if (lowerUA.contains("iphone") || lowerUA.contains("ipad")) {
+                os = "iOS";
+                // 提取iOS版本
+                if (lowerUA.contains("ios 18")) {
+                    osVersion = "18";
+                } else if (lowerUA.contains("ios 17")) {
+                    osVersion = "17";
+                } else if (lowerUA.contains("ios 16")) {
+                    osVersion = "16";
+                } else if (lowerUA.contains("ios 15")) {
+                    osVersion = "15";
+                } else if (lowerUA.contains("ios 14")) {
+                    osVersion = "14";
+                } else if (lowerUA.contains("ios 13")) {
+                    osVersion = "13";
+                } else if (lowerUA.contains("ios 12")) {
+                    osVersion = "12";
+                } else {
+                    osVersion = "15"; // 默认版本
+                }
+
+                // iOS设备屏幕尺寸
+                if (lowerUA.contains("ipad")) {
+                    width = 768;
+                    height = 1024;
+                    deviceScaleFactor = 2.0;
+                } else {
+                    width = 375;
+                    height = 812;
+                    deviceScaleFactor = 3.0;
+                }
+            }
+
+            // 提取设备型号
+            String model = extractModelFromUserAgent(userAgent, brand);
+
+            // 创建设备信息
+            DeviceInfo device = new DeviceInfo(
+                    brand + " " + model,
+                    brand,
+                    model,
+                    os,
+                    osVersion,
+                    width,
+                    height,
+                    deviceScaleFactor,
+                    true, // isMobile
+                    true  // hasTouch
+            );
+
+            // 添加这个UserAgent到设备
+            String browserType = detectBrowserType(userAgent);
+            device.userAgents.put(browserType, userAgent);
+
+            return device;
+
+        } catch (Exception e) {
+            System.err.println("提取设备信息失败: " + e.getMessage());
+            return null;
+        }
+    }
+
+    /**
+     * 从UserAgent提取设备型号
+     */
+    private static String extractModelFromUserAgent(String userAgent, String brand) {
+        String lowerUA = userAgent.toLowerCase();
+
+        // 华为设备型号提取
+        if (brand.equals("华为") || brand.equals("Honor")) {
+            if (lowerUA.contains("p40")) return "P40";
+            if (lowerUA.contains("p50")) return "P50";
+            if (lowerUA.contains("mate40")) return "Mate40";
+            if (lowerUA.contains("nova8")) return "Nova8";
+            if (lowerUA.contains("honor")) return "Honor";
+            return "Unknown";
+        }
+
+        // 小米设备型号提取
+        if (brand.equals("小米")) {
+            if (lowerUA.contains("mi 11")) return "MI11";
+            if (lowerUA.contains("mi 12")) return "MI12";
+            if (lowerUA.contains("mi 13")) return "MI13";
+            if (lowerUA.contains("redmi")) return "Redmi";
+            return "Unknown";
+        }
+
+        // Vivo设备型号提取
+        if (brand.equals("Vivo")) {
+            if (lowerUA.contains("vivo")) return "Vivo";
+            return "Unknown";
+        }
+
+        // OPPO设备型号提取
+        if (brand.equals("OPPO")) {
+            if (lowerUA.contains("oppo")) return "OPPO";
+            if (lowerUA.contains("oneplus")) return "OnePlus";
+            return "Unknown";
+        }
+
+        // 三星设备型号提取
+        if (brand.equals("Samsung")) {
+            if (lowerUA.contains("galaxy")) return "Galaxy";
+            if (lowerUA.contains("samsung")) return "Samsung";
+            return "Unknown";
+        }
+
+        // iOS设备型号提取
+        if (lowerUA.contains("iphone")) {
+            if (lowerUA.contains("iphone 15")) return "iPhone 15";
+            if (lowerUA.contains("iphone 14")) return "iPhone 14";
+            if (lowerUA.contains("iphone 13")) return "iPhone 13";
+            if (lowerUA.contains("iphone 12")) return "iPhone 12";
+            if (lowerUA.contains("iphone 11")) return "iPhone 11";
+            return "iPhone";
+        }
+
+        if (lowerUA.contains("ipad")) {
+            if (lowerUA.contains("ipad pro")) return "iPad Pro";
+            if (lowerUA.contains("ipad air")) return "iPad Air";
+            if (lowerUA.contains("ipad mini")) return "iPad Mini";
+            return "iPad";
+        }
+
+        return "Unknown";
+    }
+
+    /**
+     * 获取从UserAgent提取的随机设备
+     */
+    public static DeviceInfo getRandomExtractedDevice() {
+        if (EXTRACTED_DEVICES.isEmpty()) {
+            return getRandomDevice(); // 回退到硬编码设备
+        }
+        return EXTRACTED_DEVICES.get(new Random().nextInt(EXTRACTED_DEVICES.size()));
+    }
+
+    /**
+     * 获取从UserAgent提取的设备数量
+     */
+    public static int getExtractedDeviceCount() {
+        return EXTRACTED_DEVICES.size();
     }
 }
