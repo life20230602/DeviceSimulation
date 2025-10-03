@@ -11,10 +11,6 @@ import java.util.*;
  * 每个设备包含多个UserAgent选项
  */
 public class DeviceInfoManagerV2 {
-
-    // 设备信息存储
-    private static final Map<String, DeviceInfo> DEVICE_INFO_MAP = new HashMap<>();
-
     /**
      * 设备信息类
      */
@@ -79,37 +75,9 @@ public class DeviceInfoManagerV2 {
             return deviceScaleFactor;
         }
 
-        public boolean isMobile() {
-            return isMobile;
-        }
-
-        public boolean hasTouch() {
-            return hasTouch;
-        }
-
-        public Map<String, String> getUserAgents() {
-            return userAgents;
-        }
-
-        public void addUserAgent(String browser, String userAgent) {
-            userAgents.put(browser, userAgent);
-        }
-
-        public String getUserAgent(String browser) {
-            return userAgents.getOrDefault(browser, userAgents.values().iterator().next());
-        }
-
         public String getRandomUserAgent() {
             List<String> uas = new ArrayList<>(userAgents.values());
             return uas.isEmpty() ? "" : uas.get(new Random().nextInt(uas.size()));
-        }
-
-        public List<String> getAllUserAgents() {
-            return new ArrayList<>(userAgents.values());
-        }
-
-        public Set<String> getAvailableBrowsers() {
-            return userAgents.keySet();
         }
 
         @Override
@@ -503,12 +471,5 @@ public class DeviceInfoManagerV2 {
             return getRandomDevice(); // 回退到硬编码设备
         }
         return EXTRACTED_DEVICES.get(new Random().nextInt(EXTRACTED_DEVICES.size()));
-    }
-
-    /**
-     * 获取从UserAgent提取的设备数量
-     */
-    public static int getExtractedDeviceCount() {
-        return EXTRACTED_DEVICES.size();
     }
 }
