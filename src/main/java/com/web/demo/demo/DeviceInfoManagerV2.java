@@ -405,42 +405,48 @@ public class DeviceInfoManagerV2 {
         String lowerUA = userAgent.toLowerCase();
 
         // 华为设备型号提取
-        if (brand.equals("华为") || brand.equals("Honor")) {
-            if (lowerUA.contains("p40")) return "P40";
-            if (lowerUA.contains("p50")) return "P50";
-            if (lowerUA.contains("mate40")) return "Mate40";
-            if (lowerUA.contains("nova8")) return "Nova8";
-            if (lowerUA.contains("honor")) return "Honor";
-            return "Unknown";
-        }
+        switch (brand) {
+            case "华为", "Honor" -> {
+                if (lowerUA.contains("p40")) return "P40";
+                if (lowerUA.contains("p50")) return "P50";
+                if (lowerUA.contains("mate40")) return "Mate40";
+                if (lowerUA.contains("nova8")) return "Nova8";
+                if (lowerUA.contains("honor")) return "Honor";
+                return "Unknown";
+            }
 
-        // 小米设备型号提取
-        if (brand.equals("小米")) {
-            if (lowerUA.contains("mi 11")) return "MI11";
-            if (lowerUA.contains("mi 12")) return "MI12";
-            if (lowerUA.contains("mi 13")) return "MI13";
-            if (lowerUA.contains("redmi")) return "Redmi";
-            return "Unknown";
-        }
 
-        // Vivo设备型号提取
-        if (brand.equals("Vivo")) {
-            if (lowerUA.contains("vivo")) return "Vivo";
-            return "Unknown";
-        }
+            // 小米设备型号提取
+            case "小米" -> {
+                if (lowerUA.contains("mi 11")) return "MI11";
+                if (lowerUA.contains("mi 12")) return "MI12";
+                if (lowerUA.contains("mi 13")) return "MI13";
+                if (lowerUA.contains("redmi")) return "Redmi";
+                return "Unknown";
+            }
 
-        // OPPO设备型号提取
-        if (brand.equals("OPPO")) {
-            if (lowerUA.contains("oppo")) return "OPPO";
-            if (lowerUA.contains("oneplus")) return "OnePlus";
-            return "Unknown";
-        }
 
-        // 三星设备型号提取
-        if (brand.equals("Samsung")) {
-            if (lowerUA.contains("galaxy")) return "Galaxy";
-            if (lowerUA.contains("samsung")) return "Samsung";
-            return "Unknown";
+            // Vivo设备型号提取
+            case "Vivo" -> {
+                if (lowerUA.contains("vivo")) return "Vivo";
+                return "Unknown";
+            }
+
+
+            // OPPO设备型号提取
+            case "OPPO" -> {
+                if (lowerUA.contains("oppo")) return "OPPO";
+                if (lowerUA.contains("oneplus")) return "OnePlus";
+                return "Unknown";
+            }
+
+
+            // 三星设备型号提取
+            case "Samsung" -> {
+                if (lowerUA.contains("galaxy")) return "Galaxy";
+                if (lowerUA.contains("samsung")) return "Samsung";
+                return "Unknown";
+            }
         }
 
         // iOS设备型号提取
