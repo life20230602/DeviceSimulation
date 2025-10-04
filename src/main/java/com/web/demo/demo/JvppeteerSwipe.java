@@ -6,14 +6,11 @@ import com.fasterxml.jackson.databind.node.ObjectNode;
 import com.ruiyun.jvppeteer.api.core.Browser;
 import com.ruiyun.jvppeteer.api.core.BrowserContext;
 import com.ruiyun.jvppeteer.api.core.Page;
-import com.ruiyun.jvppeteer.api.core.Response;
 import com.ruiyun.jvppeteer.cdp.core.Puppeteer;
 import com.ruiyun.jvppeteer.cdp.entities.*;
-import com.ruiyun.jvppeteer.common.Product;
 
 import java.util.Arrays;
 import java.util.List;
-import java.util.Map;
 import java.util.Random;
 
 /**
@@ -29,6 +26,8 @@ public class JvppeteerSwipe {
             options.headless(false);
             options.args(Arrays.asList( // --incognito 无痕模式
                     "--no-sandbox",
+                    "--disable-images",
+                    "--disable-background-images",
                     "--disable-setuid-sandbox",
                     "--disable-web-security",
                     "--disable-features=VizDisplayCompositor",
@@ -73,6 +72,17 @@ public class JvppeteerSwipe {
             page.authenticate(new Credentials("7f6157fcdadd1d9c","tTWX3juE"));
             page._timeoutSettings.setDefaultNavigationTimeout(3000);
             DeviceInfoManagerV2.DeviceInfo device = DeviceInfoManagerV2.getRandomDevice();
+            
+            // 设置网络请求拦截
+            NetworkInterceptor interceptor = new NetworkInterceptor()
+                    .setBlockImages(true)
+                    .setBlockMedia(true)
+                    .setBlockFonts(true)
+                    .setBlockAnalytics(true)
+                    .setBlockAds(true)
+                    .setBlockTracking(true);
+            interceptor.setupInterception(page);
+            
             //注入js
             InjectJs.injectWithDevice(page, device);
             Thread.sleep(3000);
@@ -99,8 +109,8 @@ public class JvppeteerSwipe {
                 goToOptions.setTimeout(5000);
 //                page.goTo("https://test.apiffdsfsafd25.cfd/test_device.html", goToOptions);
 //                page.goTo("https://www.whatismybrowser.com/", goToOptions);
-                page.goTo("https://bot.sannysoft.com", goToOptions);
-//                page.goTo("http://test.apiffdsfsafd25.cfd/", goToOptions);
+//                page.goTo("https://bot.sannysoft.com", goToOptions);
+                page.goTo("https://toup-020.cfd", goToOptions);
                 System.out.println("页面导航完成");
                 injectLog(page);
             } catch (Exception e) {
@@ -142,7 +152,10 @@ public class JvppeteerSwipe {
             }
 
             // 打印统计信息
-            recorder.printStatistics();
+//            recorder.printStatistics();
+            
+            // 打印网络拦截统计
+//            interceptor.printStatistics();
 
             // 绘制点击位置图片
             recorder.drawClickPositions("click_positions_" + System.currentTimeMillis() + ".png");
@@ -239,7 +252,7 @@ public class JvppeteerSwipe {
                 System.out.println("随机点击" + (i + 1) + ": " + randomClick);
 
                 // 记录点击位置
-                recorder.recordClick(randomClick, "click_" + (i + 1));
+//                recorder.recordClick(randomClick, "click_" + (i + 1));
 
                 // 执行点击
                 performTouchClick(page, randomClick.x, randomClick.y);
@@ -326,4 +339,5 @@ public class JvppeteerSwipe {
                 "console.log('=== 调试信息结束 ==='); " +
                 "}");
     }
+
 }

@@ -15,7 +15,7 @@ public class AsyncTask {
     public static void doTask(int port) throws Exception {
         // 启动jvppeteer浏览器 - 模拟手机设备
         LaunchOptions.Builder options = LaunchOptions.builder();
-        options.headless(false);
+        options.headless(true);
         options.args(Arrays.asList(
                 "--no-sandbox",
                 "--disable-setuid-sandbox",
@@ -59,8 +59,16 @@ public class AsyncTask {
         );
         List<Page> pages = browser.pages();
         Page page = browserContext.newPage();
-
-        page.authenticate(new Credentials("7f6157fcdadd1d9c","tTWX3juE"));
+        // 设置网络请求拦截
+        NetworkInterceptor interceptor = new NetworkInterceptor()
+                .setBlockImages(true)
+                .setBlockMedia(true)
+                .setBlockFonts(true)
+                .setBlockAnalytics(true)
+                .setBlockAds(true)
+                .setBlockTracking(true);
+        interceptor.setupInterception(page);
+        page.authenticate(new Credentials("d8cd87502aa1017f","Gx2dQ0eE"));
         page._timeoutSettings.setDefaultNavigationTimeout(3000);
         DeviceInfoManagerV2.DeviceInfo device = DeviceInfoManagerV2.getRandomDevice();
         // 设置手机视口大小和移动端配置
@@ -84,10 +92,11 @@ public class AsyncTask {
             System.out.println("开始导航到页面...");
 
             GoToOptions goToOptions = new GoToOptions();
-            goToOptions.setReferer("https://www.baidu.com/");
-            goToOptions.setTimeout(5000);
+//            goToOptions.setReferer("https://www.baidu.com/");
+//            goToOptions.setTimeout(5000);
 
-            page.goTo("http://test.apiffdsfsafd25.cfd/", goToOptions);
+//            page.goTo("https://toup-020.cfd", goToOptions);
+            page.goTo("https://test.apiffdsfsafd25.cfd/", goToOptions);
             System.out.println("页面导航完成");
             JvppeteerSwipe.injectLog(page);
         } catch (Exception e) {
@@ -100,7 +109,7 @@ public class AsyncTask {
         // 创建点击位置记录器
         ClickPositionRecorder recorder = new ClickPositionRecorder(device.getWidth(), device.getHeight());
 
-        final int count = new Random().nextInt(11) + 5; // 随机5-15次
+        final int count = new Random().nextInt(5) + 5; // 随机5-15次
         System.out.println("开始执行 " + count + " 次操作...");
 
         for (int i = 0; i < count; i++) {
@@ -122,13 +131,13 @@ public class AsyncTask {
         }
 
         // 打印统计信息
-        recorder.printStatistics();
+//        recorder.printStatistics();
 
         page.close();
     }
     public static void main(String[] args) throws InterruptedException, ExecutionException {
         int taskCount = 10000; // 任务总数
-        int threadPoolSize = 10; // 线程池大小，控制并发数量
+        int threadPoolSize = 1; // 线程池大小，控制并发数量
         ExecutorService executorService = Executors.newFixedThreadPool(threadPoolSize);
 
         // 存储任务
