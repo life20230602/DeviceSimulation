@@ -5,6 +5,7 @@ import com.ruiyun.jvppeteer.api.core.Page;
 import java.nio.file.Files;
 import java.nio.file.Paths;
 import java.util.List;
+import java.util.Random;
 
 public class InjectJs{
     // 根据设备
@@ -22,6 +23,11 @@ public class InjectJs{
 
              // WebGL 注入 - 模拟真实的图形硬件信息
              injectWebGLInfo(page, deviceInfo);
+
+             // 修改屏幕宽高
+             int randSubHeight =  new Random().nextInt(139) + 20;
+             int deviceHeight = deviceInfo.getHeight() - randSubHeight;
+             page.evaluateOnNewDocument("() =>{ Object.defineProperty(window, 'innerHeight', { value: "+deviceHeight+",writable: true }); }");
              
          }catch (Exception e){
              e.printStackTrace();

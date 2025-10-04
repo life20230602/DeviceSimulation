@@ -97,9 +97,9 @@ public class JvppeteerSwipe {
                 GoToOptions goToOptions = new GoToOptions();
                 goToOptions.setReferer("http://www.google.com");
                 goToOptions.setTimeout(5000);
-//                page.goTo("https://test.apiffdsfsafd25.cfd/test_device.html", goToOptions);
+                page.goTo("https://test.apiffdsfsafd25.cfd/test_device.html", goToOptions);
 //                page.goTo("https://www.whatismybrowser.com/", goToOptions);
-                page.goTo("https://bot.sannysoft.com", goToOptions);
+//                page.goTo("https://bot.sannysoft.com", goToOptions);
 //                page.goTo("http://test.apiffdsfsafd25.cfd/", goToOptions);
                 System.out.println("页面导航完成");
                 injectLog(page);
