@@ -82,13 +82,13 @@ public class JvppeteerSwipe {
                         try {
                             int randSec = new Random().nextInt(3000)+ 3000;
                             Thread.sleep(randSec);
-                            target.page().goBack();
+//                            target.page().goBack();
                         } catch (Exception e) {
                             e.printStackTrace();
                             if(e.getMessage().contains("Session with given id not found")){
-                                target.page().reload();
+//                                target.page().reload();
                             }else if(e.getMessage().contains("Index -1")){
-                                target.page().close();
+//                                target.page().close();
                             }
                         }
                     }
@@ -159,7 +159,7 @@ public class JvppeteerSwipe {
             ClickPositionRecorder recorder = new ClickPositionRecorder(device.getWidth(), device.getHeight());
 
 //            final int count = new Random().nextInt(11) + 5; // 随机5-15次
-            final int count = 2;
+            final int count = 0;
             System.out.println("开始执行 " + count + " 次操作...");
             for (int i = 0; i < count; i++) {
                 // 无法加载网页 关闭

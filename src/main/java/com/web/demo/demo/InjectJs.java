@@ -21,14 +21,13 @@ public class InjectJs{
              }else{
                  page.evaluateOnNewDocument("() =>{ Object.defineProperty(navigator, 'platform', { get: () => 'Android' }); }");
              }
-
              // WebGL 注入 - 模拟真实的图形硬件信息
              injectWebGLInfo(page, deviceInfo);
 
              // 随机可用视图高度
-             int randSubHeight =  new Random().nextInt(80) + 99;
+             int randSubHeight =  new Random().nextInt(100) + 10;
              int deviceHeight = deviceInfo.getHeight() - randSubHeight;
-//             page.evaluateOnNewDocument("() =>{ Object.defineProperty(window, 'innerHeight', { value: "+deviceHeight+",writable: true }); }");
+//             page.evaluateOnNewDocument("() =>{ Object.defineProperty(window, 'innerHeight', { value: "+deviceHeight+",writable: false }); }");
 
              // 设备屏幕比例
              page.evaluateOnNewDocument("() =>{ Object.defineProperty(window, 'devicePixelRatio', { get: () => "+deviceInfo.getDeviceScaleFactor()+" }); }");
@@ -41,6 +40,9 @@ public class InjectJs{
 
              // 电池信息 返回null
              page.evaluateOnNewDocument("() =>{ Object.defineProperty(navigator, 'getBattery', { get: () => {} }); }");
+
+             // 注入网络
+//             navigator.connection || navigator.mozConnection || navigator.webkitConnection
 
          }catch (Exception e){
              e.printStackTrace();
