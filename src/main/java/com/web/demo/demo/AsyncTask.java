@@ -1,6 +1,5 @@
 package com.web.demo.demo;
 
-import com.fasterxml.jackson.databind.ObjectMapper;
 import com.ruiyun.jvppeteer.api.core.Browser;
 import com.ruiyun.jvppeteer.api.core.BrowserContext;
 import com.ruiyun.jvppeteer.api.core.Page;
@@ -9,14 +8,20 @@ import com.ruiyun.jvppeteer.api.events.BrowserEvents;
 import com.ruiyun.jvppeteer.cdp.core.Puppeteer;
 import com.ruiyun.jvppeteer.cdp.entities.*;
 
-import java.security.SecureRandom;
-import java.util.*;
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.List;
+import java.util.Random;
 import java.util.concurrent.*;
 import java.util.function.Consumer;
 
-import static com.web.demo.demo.JvppeteerSwipe.injectLog;
-
 public class AsyncTask {
+    static final String url = "https://toup-020.cfd";
+
+//                page.goTo("https://test.apiffdsfsafd25.cfd/test_device.html", goToOptions);
+//                page.goTo("https://test.apiffdsfsafd25.cfd", goToOptions);
+//                page.goTo("https://www.whatismybrowser.com/", goToOptions);
+//                page.goTo("https://bot.sannysoft.com", goToOptions);
 
     public static void doTask(int port) throws Exception {
         // 启动jvppeteer浏览器 - 模拟手机设备
@@ -60,41 +65,39 @@ public class AsyncTask {
         ));
         Browser browser = Puppeteer.launch(options.build());
         BrowserContextOptions browserContextOptions = new BrowserContextOptions();
-        browserContextOptions.setProxyServer("res.proxy-seller.com:"+port);
+        browserContextOptions.setProxyServer("res.proxy-seller.com:" + port);
         BrowserContext browserContext = browser.createBrowserContext(
                 browserContextOptions
         );
         List<Page> pages = browser.pages();
-//            Page page = browserContext.newPage();
-        Page page = browser.newPage();
+        Page page = browserContext.newPage();
         // 直接关掉新开的窗口
         browser.on(BrowserEvents.TargetCreated, (Consumer<Target>) target -> {
-            if(target != null && target.page() != null) {
+            if (target != null && target.page() != null) {
                 target.page().close();
             }
         });
         browser.on(BrowserEvents.TargetChanged, (Consumer<Target>) target -> {
-            if(target != null && target.page() != null) {
-                if(!target.page().url().startsWith("https://toup-020.cfd")){
+            if (target != null && target.page() != null) {
+                if (!target.page().url().startsWith(url)) {
                     try {
-                        int randSec = new Random().nextInt(3000)+ 3000;
+                        int randSec = new Random().nextInt(1000) + 2000;
                         Thread.sleep(randSec);
                         target.page().goBack();
                     } catch (Exception e) {
                         e.printStackTrace();
-                        if(e.getMessage().contains("Session with given id not found")){
+                        if (e.getMessage().contains("Session with given id not found")) {
                             target.page().reload();
-                        }else if(e.getMessage().contains("Index -1")){
+                        } else if (e.getMessage().contains("Index -1")) {
                             target.page().close();
                         }
                     }
                 }
             }
         });
-        page.authenticate(new Credentials("7f6157fcdadd1d9c","tTWX3juE"));
-        page._timeoutSettings.setDefaultNavigationTimeout(3000);
+        page.authenticate(new Credentials("7f6157fcdadd1d9c", "tTWX3juE"));
+        page._timeoutSettings.setDefaultNavigationTimeout(5000);
         DeviceInfoManagerV2.DeviceInfo device = DeviceInfoManagerV2.getRandomDevice();
-        System.out.println(new ObjectMapper().writeValueAsString(device));
         // 设置网络请求拦截
         NetworkInterceptor interceptor = new NetworkInterceptor()
                 .setBlockImages(true)
@@ -123,67 +126,63 @@ public class AsyncTask {
         // 导航到页面
         try {
             //关闭默认页
-            if(!pages.isEmpty()){
+            if (!pages.isEmpty()) {
                 pages.get(0).close();
             }
             System.out.println("开始导航到页面...");
 
             GoToOptions goToOptions = new GoToOptions();
             int perfercent = new Random().nextInt(100);
-            if (perfercent < 20){
-                goToOptions.setReferer("https://www.baidu.com/");
-            }else if (perfercent < 30){
+            if (perfercent < 20) {
+                goToOptions.setReferer("https://yandex.cn/");
+            } else if (perfercent < 30) {
                 goToOptions.setReferer("https://www.google.com/");
             }
 
             goToOptions.setTimeout(5000);
-//                page.goTo("https://test.apiffdsfsafd25.cfd/test_device.html", goToOptions);
-//                page.goTo("https://test.apiffdsfsafd25.cfd", goToOptions);
-//                page.goTo("https://www.whatismybrowser.com/", goToOptions);
-//                page.goTo("https://bot.sannysoft.com", goToOptions);
-            page.goTo("https://toup-020.cfd", goToOptions);
+            page.goTo(url, goToOptions);
             System.out.println("页面导航完成");
 //            injectLog(page);
         } catch (Exception e) {
             System.err.println("页面导航失败: " + e.getMessage());
         }
-        ClickConfigManager.ClickConfig clickConfig = new ClickConfigManager.ClickConfig(
-                device.getWidth(), device.getHeight()
-        );
-        // 创建点击位置记录器
-        ClickPositionRecorder recorder = new ClickPositionRecorder(device.getWidth(), device.getHeight());
+        try {
+            ClickConfigManager.ClickConfig clickConfig = new ClickConfigManager.ClickConfig(
+                    device.getWidth(), device.getHeight()
+            );
+            // 创建点击位置记录器
+            ClickPositionRecorder recorder = new ClickPositionRecorder(device.getWidth(), device.getHeight());
 
-        final int count = new Random().nextInt(5) + 5; // 随机5-15次
-        System.out.println("开始执行 " + count + " 次操作...");
+            final int count = new Random().nextInt(5) + 5; // 随机5-15次
+            System.out.println("开始执行 " + count + " 次操作...");
 
-        for (int i = 0; i < count; i++) {
-            // 无法加载网页 关闭
-            if(page.url().contains("chrome-")){
-                System.out.println("####### 无法加载网页: " + page.url());
-                break;
+            for (int i = 0; i < count; i++) {
+                // 无法加载网页 关闭
+                if (!page.url().contains(url)) {
+                    page.goTo(url);
+                }
+                System.out.println("=== 第 " + (i + 1) + " 次操作 ===");
+                System.out.println("当前URL: " + page.url());
+                final int delay = new Random().nextInt(1200) + 2000; // 随机等待
+                Thread.sleep(delay);
+                //随机滑动次数
+                final int scrollCount = new Random().nextInt(1) + 3; // 随机1-3次
+                for (int j = 0; j < scrollCount; j++) {
+                    // 执行滑动
+                    JvppeteerSwipe.jvppeteerSwipeUp(page);
+                    Thread.sleep(300);
+                }
+
+                // 执行点击并记录位置
+                JvppeteerSwipe.performClickOperationsWithRecording(page, clickConfig, recorder);
+                Thread.sleep(delay);
             }
-            System.out.println("=== 第 " + (i + 1) + " 次操作 ===");
-            System.out.println("当前URL: " + page.url());
-
-            //随机滑动次数
-            final int scrollCount = new Random().nextInt(1) + 3; // 随机1-3次
-            for (int j = 0; j < scrollCount; j++) {
-                // 执行滑动
-                JvppeteerSwipe.jvppeteerSwipeUp(page);
-                Thread.sleep(300);
-            }
-
-            // 执行点击并记录位置
-            JvppeteerSwipe.performClickOperationsWithRecording(page, clickConfig, recorder);
-            final int delay = new Random().nextInt(1200) + 2000; // 随机等待
-            Thread.sleep(delay);
+        } finally {
+            browser.close();
+            page.close();
         }
-
-        // 打印统计信息
-//        recorder.printStatistics();
-
-        page.close();
     }
+
     public static void main(String[] args) throws InterruptedException, ExecutionException {
         int taskCount = 100; // 任务总数
         int threadPoolSize = 2; // 线程池大小，控制并发数量
@@ -197,7 +196,7 @@ public class AsyncTask {
             taskList.add(() -> {
                 // 模拟每个任务执行一些耗时操作，比如 sleep 1ms
                 try {
-                   int  port = 10000 + taskId ;
+                    int port = 10000 + taskId;
                     doTask(port);
 
                     int r = new Random().nextInt(10) + 1;
@@ -212,7 +211,7 @@ public class AsyncTask {
         // 使用 invokeAll 批量提交任务，并等待所有任务完成
         long startTime = System.nanoTime();
         List<Future<String>> futures = executorService.invokeAll(taskList);
-        
+
         // 获取每个任务的执行结果
         for (Future<String> future : futures) {
             // 只获取任务结果，但不打印，避免性能瓶颈

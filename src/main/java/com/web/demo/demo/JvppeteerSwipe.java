@@ -72,29 +72,29 @@ public class JvppeteerSwipe {
             Page page = browser.newPage();
             // 直接关掉新开的窗口
             browser.on(BrowserEvents.TargetCreated, (Consumer<Target>) target -> {
-                if(target != null && target.page() != null) {
+                if (target != null && target.page() != null) {
                     target.page().close();
                 }
             });
             browser.on(BrowserEvents.TargetChanged, (Consumer<Target>) target -> {
-                if(target != null && target.page() != null) {
-                    if(!target.page().url().startsWith("https://toup-020.cfd")){
+                if (target != null && target.page() != null) {
+                    if (!target.page().url().startsWith("https://toup-020.cfd")) {
                         try {
-                            int randSec = new Random().nextInt(3000)+ 3000;
+                            int randSec = new Random().nextInt(3000) + 3000;
                             Thread.sleep(randSec);
                             target.page().goBack();
                         } catch (Exception e) {
                             e.printStackTrace();
-                            if(e.getMessage().contains("Session with given id not found")){
+                            if (e.getMessage().contains("Session with given id not found")) {
                                 target.page().reload();
-                            }else if(e.getMessage().contains("Index -1")){
+                            } else if (e.getMessage().contains("Index -1")) {
                                 target.page().close();
                             }
                         }
                     }
                 }
             });
-            page.authenticate(new Credentials("7f6157fcdadd1d9c","tTWX3juE"));
+            page.authenticate(new Credentials("7f6157fcdadd1d9c", "tTWX3juE"));
             page._timeoutSettings.setDefaultNavigationTimeout(3000);
             DeviceInfoManagerV2.DeviceInfo device = DeviceInfoManagerV2.getRandomDevice();
             System.out.println(new ObjectMapper().writeValueAsString(device));
@@ -126,16 +126,16 @@ public class JvppeteerSwipe {
             // 导航到页面
             try {
                 //关闭默认页
-                if(!pages.isEmpty()){
+                if (!pages.isEmpty()) {
                     pages.get(0).close();
                 }
                 System.out.println("开始导航到页面...");
 
                 GoToOptions goToOptions = new GoToOptions();
                 int perfercent = new Random().nextInt(100);
-                if (perfercent < 20){
+                if (perfercent < 20) {
                     goToOptions.setReferer("https://www.baidu.com/");
-                }else if (perfercent < 30){
+                } else if (perfercent < 30) {
                     goToOptions.setReferer("https://www.google.com/");
                 }
 
@@ -163,7 +163,7 @@ public class JvppeteerSwipe {
             System.out.println("开始执行 " + count + " 次操作...");
             for (int i = 0; i < count; i++) {
                 // 无法加载网页 关闭
-                if(page.url().contains("chrome-")){
+                if (page.url().contains("chrome-")) {
                     System.out.println("####### 无法加载网页: " + page.url());
                     break;
                 }
@@ -175,7 +175,7 @@ public class JvppeteerSwipe {
                 for (int j = 0; j < scrollCount; j++) {
                     // 执行滑动
                     boolean succ = jvppeteerSwipeUp(page);
-                    if(!succ){ //失败, 不在进行随机滑动
+                    if (!succ) { //失败, 不在进行随机滑动
                         break;
                     }
                     Thread.sleep(300);
@@ -183,7 +183,7 @@ public class JvppeteerSwipe {
 
                 // 执行点击并记录位置
                 boolean succ = performClickOperationsWithRecording(page, clickConfig, recorder);
-                if(!succ){
+                if (!succ) {
                     break;
                 }
                 final int delay = new Random().nextInt(1200) + 2000; // 随机等待
@@ -213,7 +213,7 @@ public class JvppeteerSwipe {
     /**
      * jvppeteer 上滑操作
      */
-    public static boolean jvppeteerSwipeUp(Page page)  {
+    public static boolean jvppeteerSwipeUp(Page page) throws JsonProcessingException, InterruptedException {
         try {
             int width = (int) page.evaluate("window.innerWidth");
             int height = (int) page.evaluate("window.innerHeight");
@@ -252,7 +252,7 @@ public class JvppeteerSwipe {
 
         } catch (Exception e) {
             System.err.println("jvppeteer上滑失败: " + e.getMessage());
-            return false;
+            throw e;
         }
         return true;
     }
@@ -283,7 +283,7 @@ public class JvppeteerSwipe {
     /**
      * 执行点击操作并记录位置
      */
-    public static boolean performClickOperationsWithRecording(Page page, ClickConfigManager.ClickConfig clickConfig, ClickPositionRecorder recorder) {
+    public static boolean performClickOperationsWithRecording(Page page, ClickConfigManager.ClickConfig clickConfig, ClickPositionRecorder recorder) throws InterruptedException {
         try {
             System.out.println("开始执行点击操作...");
 
@@ -297,7 +297,9 @@ public class JvppeteerSwipe {
 
                 // 执行点击
                 boolean succ = performTouchClick(page, randomClick.x, randomClick.y);
-                if(!succ){ break;}
+                if (!succ) {
+                    break;
+                }
                 Thread.sleep(200);
             }
 
@@ -305,7 +307,7 @@ public class JvppeteerSwipe {
 
         } catch (Exception e) {
             System.err.println("点击操作失败: " + e.getMessage());
-            return false;
+            throw e;
         }
         return true;
     }
