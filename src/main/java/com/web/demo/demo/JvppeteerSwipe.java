@@ -80,7 +80,7 @@ public class JvppeteerSwipe {
                 if(target != null && target.page() != null) {
                     if(!target.page().url().startsWith("https://toup-020.cfd")){
                         try {
-                            int randSec = new Random().nextInt(2000)+ 2000;
+                            int randSec = new Random().nextInt(3000)+ 2000;
                             Thread.sleep(randSec);
                             target.page().goBack();
                         } catch (Exception e) {
