@@ -13,7 +13,8 @@ public class InjectJs{
          try {
              // 语言修改
              page.evaluateOnNewDocument("() =>{ Object.defineProperty(navigator, 'languages', { get: () => ['zh-CN','en-US','en'] }); }");
-
+             //z注入标记
+             page.evaluateOnNewDocument("()=>{window.fix = {};}");
              // 修改型号
              if( deviceInfo.getBrand().equals("Apple")){
                  page.evaluateOnNewDocument("() =>{ Object.defineProperty(navigator, 'platform', { get: () => 'iPhone' }); }");
