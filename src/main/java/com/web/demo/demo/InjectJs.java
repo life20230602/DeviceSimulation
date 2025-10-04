@@ -25,11 +25,20 @@ public class InjectJs{
              // WebGL 注入 - 模拟真实的图形硬件信息
              injectWebGLInfo(page, deviceInfo);
 
-             // 修改屏幕宽高
+             // 随机可用视图高度
              int randSubHeight =  new Random().nextInt(139) + 20;
              int deviceHeight = deviceInfo.getHeight() - randSubHeight;
              page.evaluateOnNewDocument("() =>{ Object.defineProperty(window, 'innerHeight', { value: "+deviceHeight+",writable: true }); }");
-             
+
+             // 设备屏幕比例
+             page.evaluateOnNewDocument("() =>{ Object.defineProperty(window, 'devicePixelRatio', { get: () => "+deviceInfo.getDeviceScaleFactor()+" }); }");
+
+             // 内存返回null
+             page.evaluateOnNewDocument("() =>{ Object.defineProperty(navigator, 'deviceMemory', { get: () => null }); }");
+
+             // userAgentData 返回null
+             page.evaluateOnNewDocument("() =>{ Object.defineProperty(navigator, 'userAgentData', { get: () => null }); }");
+
          }catch (Exception e){
              e.printStackTrace();
          }
