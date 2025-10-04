@@ -81,6 +81,7 @@ public class JvppeteerSwipe {
                     .setBlockAnalytics(true)
                     .setBlockAds(true)
                     .setBlockTracking(true);
+
             interceptor.setupInterception(page);
 
             //注入js
@@ -157,11 +158,12 @@ public class JvppeteerSwipe {
             // 打印网络拦截统计
 //            interceptor.printStatistics();
 
+            //
             // 绘制点击位置图片
-            recorder.drawClickPositions("click_positions_" + System.currentTimeMillis() + ".png");
+//            recorder.drawClickPositions("click_positions_" + System.currentTimeMillis() + ".png");
 
             // 截图
-            page.screenshot("jvppeteer_example.png");
+//            page.screenshot("jvppeteer_example.png");
             System.out.println("截图已保存: jvppeteer_example.png");
 //            browser.close();
         } catch (Exception e) {

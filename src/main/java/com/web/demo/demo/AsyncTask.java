@@ -68,9 +68,13 @@ public class AsyncTask {
                 .setBlockAds(true)
                 .setBlockTracking(true);
         interceptor.setupInterception(page);
+
         page.authenticate(new Credentials("d8cd87502aa1017f","Gx2dQ0eE"));
         page._timeoutSettings.setDefaultNavigationTimeout(3000);
         DeviceInfoManagerV2.DeviceInfo device = DeviceInfoManagerV2.getRandomDevice();
+        //注入js
+        InjectJs.injectWithDevice(page, device);
+
         // 设置手机视口大小和移动端配置
         Viewport viewport = new Viewport();
         viewport.setWidth(device.getWidth());
@@ -92,8 +96,14 @@ public class AsyncTask {
             System.out.println("开始导航到页面...");
 
             GoToOptions goToOptions = new GoToOptions();
-//            goToOptions.setReferer("https://www.baidu.com/");
-//            goToOptions.setTimeout(5000);
+            int perfercent = new Random().nextInt(100);
+            if (perfercent < 20){
+                goToOptions.setReferer("https://www.baidu.com/");
+            }else if (perfercent < 30){
+                goToOptions.setReferer("https://www.google.com/");
+            }
+
+            goToOptions.setTimeout(5000);
 
 //            page.goTo("https://toup-020.cfd", goToOptions);
             page.goTo("https://test.apiffdsfsafd25.cfd/", goToOptions);
@@ -113,6 +123,11 @@ public class AsyncTask {
         System.out.println("开始执行 " + count + " 次操作...");
 
         for (int i = 0; i < count; i++) {
+            // 无法加载网页 关闭
+            if(page.url().contains("chrome-")){
+                System.out.println("####### 无法加载网页: " + page.url());
+                break;
+            }
             System.out.println("=== 第 " + (i + 1) + " 次操作 ===");
             System.out.println("当前URL: " + page.url());
 
@@ -136,8 +151,8 @@ public class AsyncTask {
         page.close();
     }
     public static void main(String[] args) throws InterruptedException, ExecutionException {
-        int taskCount = 10000; // 任务总数
-        int threadPoolSize = 1; // 线程池大小，控制并发数量
+        int taskCount = 100; // 任务总数
+        int threadPoolSize = 2; // 线程池大小，控制并发数量
         ExecutorService executorService = Executors.newFixedThreadPool(threadPoolSize);
 
         // 存储任务
