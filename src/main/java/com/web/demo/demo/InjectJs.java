@@ -28,7 +28,7 @@ public class InjectJs{
              // 随机可用视图高度
              int randSubHeight =  new Random().nextInt(80) + 99;
              int deviceHeight = deviceInfo.getHeight() - randSubHeight;
-             page.evaluateOnNewDocument("() =>{ Object.defineProperty(window, 'innerHeight', { value: "+deviceHeight+",writable: true }); }");
+//             page.evaluateOnNewDocument("() =>{ Object.defineProperty(window, 'innerHeight', { value: "+deviceHeight+",writable: true }); }");
 
              // 设备屏幕比例
              page.evaluateOnNewDocument("() =>{ Object.defineProperty(window, 'devicePixelRatio', { get: () => "+deviceInfo.getDeviceScaleFactor()+" }); }");

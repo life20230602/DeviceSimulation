@@ -147,6 +147,9 @@ public class AsyncTask {
         } catch (Exception e) {
             System.err.println("页面导航失败: " + e.getMessage());
         }
+        ClickConfigManager.ClickConfig clickConfig = new ClickConfigManager.ClickConfig(
+                device.getWidth(), device.getHeight()
+        );
         // 创建点击位置记录器
         ClickPositionRecorder recorder = new ClickPositionRecorder(device.getWidth(), device.getHeight());
 
