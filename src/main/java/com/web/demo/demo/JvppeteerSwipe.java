@@ -3,15 +3,16 @@ package com.web.demo.demo;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.node.ObjectNode;
-import com.ruiyun.jvppeteer.api.core.Browser;
-import com.ruiyun.jvppeteer.api.core.BrowserContext;
-import com.ruiyun.jvppeteer.api.core.Page;
+import com.ruiyun.jvppeteer.api.core.*;
+import com.ruiyun.jvppeteer.api.events.BrowserEvents;
 import com.ruiyun.jvppeteer.cdp.core.Puppeteer;
 import com.ruiyun.jvppeteer.cdp.entities.*;
 
+import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
 import java.util.Random;
+import java.util.function.Consumer;
 
 /**
  * jvppeteer 滑动实现
@@ -69,10 +70,29 @@ public class JvppeteerSwipe {
             List<Page> pages = browser.pages();
 //            Page page = browserContext.newPage();
             Page page = browser.newPage();
+            // 直接关掉新开的窗口
+            browser.on(BrowserEvents.TargetCreated, (Consumer<Target>) target -> {
+                if(target != null && target.page() != null) {
+                    target.page().close();
+                }
+            });
+            browser.on(BrowserEvents.TargetChanged, (Consumer<Target>) target -> {
+                if(target != null && target.page() != null) {
+                    if(!target.page().url().startsWith("https://toup-020.cfd")){
+                        try {
+                            int randSec = new Random().nextInt(1000)+ 500;
+                            Thread.sleep(randSec);
+                            target.page().goBack();
+                        } catch (Exception e) {
+                            e.printStackTrace();
+                        }
+                    }
+                }
+            });
             page.authenticate(new Credentials("7f6157fcdadd1d9c","tTWX3juE"));
             page._timeoutSettings.setDefaultNavigationTimeout(3000);
             DeviceInfoManagerV2.DeviceInfo device = DeviceInfoManagerV2.getRandomDevice();
-
+            System.out.println(new ObjectMapper().writeValueAsString(device));
             // 设置网络请求拦截
             NetworkInterceptor interceptor = new NetworkInterceptor()
                     .setBlockImages(true)
@@ -86,6 +106,7 @@ public class JvppeteerSwipe {
 
             //注入js
             InjectJs.injectWithDevice(page, device);
+
             Thread.sleep(3000);
             // 设置手机视口大小和移动端配置
             Viewport viewport = new Viewport();
@@ -108,10 +129,11 @@ public class JvppeteerSwipe {
                 GoToOptions goToOptions = new GoToOptions();
                 goToOptions.setReferer("http://www.google.com");
                 goToOptions.setTimeout(5000);
-                page.goTo("https://test.apiffdsfsafd25.cfd/test_device.html", goToOptions);
+//                page.goTo("https://test.apiffdsfsafd25.cfd/test_device.html", goToOptions);
+//                page.goTo("https://test.apiffdsfsafd25.cfd", goToOptions);
 //                page.goTo("https://www.whatismybrowser.com/", goToOptions);
 //                page.goTo("https://bot.sannysoft.com", goToOptions);
-//                page.goTo("https://toup-020.cfd", goToOptions);
+                page.goTo("https://toup-020.cfd", goToOptions);
                 System.out.println("页面导航完成");
                 injectLog(page);
             } catch (Exception e) {
@@ -125,10 +147,11 @@ public class JvppeteerSwipe {
             // 创建点击位置记录器
             ClickPositionRecorder recorder = new ClickPositionRecorder(device.getWidth(), device.getHeight());
 
-//            final int count = new Random().nextInt(11) + 5; // 随机5-15次
-            final int count = 0;
+            final int count = new Random().nextInt(11) + 5; // 随机5-15次
+//            final int count = 0;
             System.out.println("开始执行 " + count + " 次操作...");
 
+            List<String>  urls = new ArrayList<>();
             for (int i = 0; i < count; i++) {
                 // 无法加载网页 关闭
                 if(page.url().contains("chrome-")){
@@ -142,16 +165,21 @@ public class JvppeteerSwipe {
                 final int scrollCount = new Random().nextInt(1) + 3; // 随机1-3次
                 for (int j = 0; j < scrollCount; j++) {
                     // 执行滑动
-                    jvppeteerSwipeUp(page);
+                    boolean succ = jvppeteerSwipeUp(page);
+                    if(!succ){ //失败, 不在进行随机滑动
+                        break;
+                    }
                     Thread.sleep(300);
                 }
 
                 // 执行点击并记录位置
-                performClickOperationsWithRecording(page, clickConfig, recorder);
+                boolean succ = performClickOperationsWithRecording(page, clickConfig, recorder);
+                if(!succ){
+                    break;
+                }
                 final int delay = new Random().nextInt(1200) + 2000; // 随机等待
                 Thread.sleep(delay);
             }
-
             // 打印统计信息
 //            recorder.printStatistics();
 
@@ -176,7 +204,7 @@ public class JvppeteerSwipe {
     /**
      * jvppeteer 上滑操作
      */
-    public static void jvppeteerSwipeUp(Page page) {
+    public static boolean jvppeteerSwipeUp(Page page)  {
         try {
             int width = (int) page.evaluate("window.innerWidth");
             int height = (int) page.evaluate("window.innerHeight");
@@ -215,7 +243,9 @@ public class JvppeteerSwipe {
 
         } catch (Exception e) {
             System.err.println("jvppeteer上滑失败: " + e.getMessage());
+            return false;
         }
+        return true;
     }
 
     /**
@@ -244,7 +274,7 @@ public class JvppeteerSwipe {
     /**
      * 执行点击操作并记录位置
      */
-    public static void performClickOperationsWithRecording(Page page, ClickConfigManager.ClickConfig clickConfig, ClickPositionRecorder recorder) {
+    public static boolean performClickOperationsWithRecording(Page page, ClickConfigManager.ClickConfig clickConfig, ClickPositionRecorder recorder) {
         try {
             System.out.println("开始执行点击操作...");
 
@@ -265,8 +295,9 @@ public class JvppeteerSwipe {
 
         } catch (Exception e) {
             System.err.println("点击操作失败: " + e.getMessage());
-            e.printStackTrace();
+            return false;
         }
+        return true;
     }
 
     /**

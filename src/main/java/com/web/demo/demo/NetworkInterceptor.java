@@ -52,7 +52,7 @@ public class NetworkInterceptor {
     private void initDefaultConfig() {
         // 默认阻止的文件扩展名
         blockedExtensions.addAll(Arrays.asList(
-            "jpg", "jpeg", "png", "gif", "webp", "svg", "ico", "bmp", "tiff",
+            "apk","jpg", "jpeg", "png", "gif", "webp", "svg", "ico", "bmp", "tiff",
             "mp4", "mp3", "wav", "avi", "mov", "wmv", "flv", "webm", "ogg",
             "woff", "woff2", "ttf", "eot", "otf"
         ));
@@ -89,7 +89,9 @@ public class NetworkInterceptor {
                     String url = request.url();
                     ResourceType resourceType = request.resourceType();
                     // 打印请求信息
-
+                    if( url.contains("statistics")){
+                        System.out.println("加载统计js: "+ url);
+                    }
                     // 判断是否应该阻止请求
                     if (shouldBlockRequest(url, resourceType)) {
                         blockedRequests++;

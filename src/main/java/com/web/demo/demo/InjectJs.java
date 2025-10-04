@@ -39,6 +39,9 @@ public class InjectJs{
              // userAgentData 返回null
              page.evaluateOnNewDocument("() =>{ Object.defineProperty(navigator, 'userAgentData', { get: () => null }); }");
 
+             // 电池信息 返回null
+             page.evaluateOnNewDocument("() =>{ Object.defineProperty(navigator, 'getBattery', { get: () => {} }); }");
+
          }catch (Exception e){
              e.printStackTrace();
          }
