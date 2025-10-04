@@ -1,23 +1,31 @@
 package com.web.demo.demo;
 
+import com.fasterxml.jackson.databind.ObjectMapper;
 import com.ruiyun.jvppeteer.api.core.Browser;
 import com.ruiyun.jvppeteer.api.core.BrowserContext;
 import com.ruiyun.jvppeteer.api.core.Page;
+import com.ruiyun.jvppeteer.api.core.Target;
+import com.ruiyun.jvppeteer.api.events.BrowserEvents;
 import com.ruiyun.jvppeteer.cdp.core.Puppeteer;
 import com.ruiyun.jvppeteer.cdp.entities.*;
 
 import java.security.SecureRandom;
 import java.util.*;
 import java.util.concurrent.*;
+import java.util.function.Consumer;
+
+import static com.web.demo.demo.JvppeteerSwipe.injectLog;
 
 public class AsyncTask {
 
     public static void doTask(int port) throws Exception {
         // 启动jvppeteer浏览器 - 模拟手机设备
         LaunchOptions.Builder options = LaunchOptions.builder();
-        options.headless(true);
-        options.args(Arrays.asList(
+        options.headless(false);
+        options.args(Arrays.asList( // --incognito 无痕模式
                 "--no-sandbox",
+                "--disable-images",
+                "--disable-background-images",
                 "--disable-setuid-sandbox",
                 "--disable-web-security",
                 "--disable-features=VizDisplayCompositor",
@@ -50,7 +58,6 @@ public class AsyncTask {
                 "--disable-features=PerformanceHints",
                 "--disable-features=PerformanceManager"
         ));
-
         Browser browser = Puppeteer.launch(options.build());
         BrowserContextOptions browserContextOptions = new BrowserContextOptions();
         browserContextOptions.setProxyServer("res.proxy-seller.com:"+port);
@@ -58,7 +65,36 @@ public class AsyncTask {
                 browserContextOptions
         );
         List<Page> pages = browser.pages();
-        Page page = browserContext.newPage();
+//            Page page = browserContext.newPage();
+        Page page = browser.newPage();
+        // 直接关掉新开的窗口
+        browser.on(BrowserEvents.TargetCreated, (Consumer<Target>) target -> {
+            if(target != null && target.page() != null) {
+                target.page().close();
+            }
+        });
+        browser.on(BrowserEvents.TargetChanged, (Consumer<Target>) target -> {
+            if(target != null && target.page() != null) {
+                if(!target.page().url().startsWith("https://toup-020.cfd")){
+                    try {
+                        int randSec = new Random().nextInt(3000)+ 3000;
+                        Thread.sleep(randSec);
+                        target.page().goBack();
+                    } catch (Exception e) {
+                        e.printStackTrace();
+                        if(e.getMessage().contains("Session with given id not found")){
+                            target.page().reload();
+                        }else if(e.getMessage().contains("Index -1")){
+                            target.page().close();
+                        }
+                    }
+                }
+            }
+        });
+        page.authenticate(new Credentials("7f6157fcdadd1d9c","tTWX3juE"));
+        page._timeoutSettings.setDefaultNavigationTimeout(3000);
+        DeviceInfoManagerV2.DeviceInfo device = DeviceInfoManagerV2.getRandomDevice();
+        System.out.println(new ObjectMapper().writeValueAsString(device));
         // 设置网络请求拦截
         NetworkInterceptor interceptor = new NetworkInterceptor()
                 .setBlockImages(true)
@@ -67,14 +103,13 @@ public class AsyncTask {
                 .setBlockAnalytics(true)
                 .setBlockAds(true)
                 .setBlockTracking(true);
+
         interceptor.setupInterception(page);
 
-        page.authenticate(new Credentials("d8cd87502aa1017f","Gx2dQ0eE"));
-        page._timeoutSettings.setDefaultNavigationTimeout(3000);
-        DeviceInfoManagerV2.DeviceInfo device = DeviceInfoManagerV2.getRandomDevice();
         //注入js
         InjectJs.injectWithDevice(page, device);
 
+        Thread.sleep(3000);
         // 设置手机视口大小和移动端配置
         Viewport viewport = new Viewport();
         viewport.setWidth(device.getWidth());
@@ -85,14 +120,12 @@ public class AsyncTask {
         page.setViewport(viewport);
         // 设置移动端用户代理
         page.setUserAgent(device.getRandomUserAgent());
-
         // 导航到页面
         try {
             //关闭默认页
             if(!pages.isEmpty()){
                 pages.get(0).close();
             }
-
             System.out.println("开始导航到页面...");
 
             GoToOptions goToOptions = new GoToOptions();
@@ -104,18 +137,16 @@ public class AsyncTask {
             }
 
             goToOptions.setTimeout(5000);
-
-//            page.goTo("https://toup-020.cfd", goToOptions);
-            page.goTo("https://test.apiffdsfsafd25.cfd/", goToOptions);
+//                page.goTo("https://test.apiffdsfsafd25.cfd/test_device.html", goToOptions);
+//                page.goTo("https://test.apiffdsfsafd25.cfd", goToOptions);
+//                page.goTo("https://www.whatismybrowser.com/", goToOptions);
+//                page.goTo("https://bot.sannysoft.com", goToOptions);
+            page.goTo("https://toup-020.cfd", goToOptions);
             System.out.println("页面导航完成");
-            JvppeteerSwipe.injectLog(page);
+//            injectLog(page);
         } catch (Exception e) {
             System.err.println("页面导航失败: " + e.getMessage());
         }
-        ClickConfigManager.ClickConfig clickConfig = new ClickConfigManager.ClickConfig(
-                device.getWidth(), device.getHeight()
-        );
-
         // 创建点击位置记录器
         ClickPositionRecorder recorder = new ClickPositionRecorder(device.getWidth(), device.getHeight());
 

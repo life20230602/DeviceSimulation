@@ -202,7 +202,7 @@ public class JvppeteerSwipe {
             // 截图
 //            page.screenshot("jvppeteer_example.png");
             System.out.println("截图已保存: jvppeteer_example.png");
-            browser.close();
+//            browser.close();
         } catch (Exception e) {
             System.err.println("jvppeteer滑动失败: " + e.getMessage());
             e.printStackTrace();
