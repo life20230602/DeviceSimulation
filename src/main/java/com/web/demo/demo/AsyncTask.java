@@ -26,7 +26,7 @@ public class AsyncTask {
     public static void doTask(int port) throws Exception {
         // 启动jvppeteer浏览器 - 模拟手机设备
         LaunchOptions.Builder options = LaunchOptions.builder();
-        options.headless(false);
+        options.headless(true);
         options.args(Arrays.asList( // --incognito 无痕模式
                 "--no-sandbox",
                 "--disable-images",
@@ -81,7 +81,7 @@ public class AsyncTask {
             if (target != null && target.page() != null) {
                 if (!target.page().url().startsWith(url)) {
                     try {
-                        int randSec = new Random().nextInt(1000) + 2000;
+                        int randSec = new Random().nextInt(5000) + 2000;
                         Thread.sleep(randSec);
                         target.page().goBack();
                     } catch (Exception e) {
