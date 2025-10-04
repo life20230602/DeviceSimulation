@@ -80,11 +80,16 @@ public class JvppeteerSwipe {
                 if(target != null && target.page() != null) {
                     if(!target.page().url().startsWith("https://toup-020.cfd")){
                         try {
-                            int randSec = new Random().nextInt(1000)+ 500;
+                            int randSec = new Random().nextInt(2000)+ 2000;
                             Thread.sleep(randSec);
                             target.page().goBack();
                         } catch (Exception e) {
                             e.printStackTrace();
+                            if(e.getMessage().contains("Session with given id not found")){
+                                target.page().reload();
+                            }else if(e.getMessage().contains("Index -1")){
+                                target.page().close();
+                            }
                         }
                     }
                 }
@@ -127,7 +132,13 @@ public class JvppeteerSwipe {
                 System.out.println("开始导航到页面...");
 
                 GoToOptions goToOptions = new GoToOptions();
-                goToOptions.setReferer("http://www.google.com");
+                int perfercent = new Random().nextInt(100);
+                if (perfercent < 20){
+                    goToOptions.setReferer("https://www.baidu.com/");
+                }else if (perfercent < 30){
+                    goToOptions.setReferer("https://www.google.com/");
+                }
+
                 goToOptions.setTimeout(5000);
 //                page.goTo("https://test.apiffdsfsafd25.cfd/test_device.html", goToOptions);
 //                page.goTo("https://test.apiffdsfsafd25.cfd", goToOptions);
@@ -147,11 +158,9 @@ public class JvppeteerSwipe {
             // 创建点击位置记录器
             ClickPositionRecorder recorder = new ClickPositionRecorder(device.getWidth(), device.getHeight());
 
-            final int count = new Random().nextInt(11) + 5; // 随机5-15次
-//            final int count = 0;
+//            final int count = new Random().nextInt(11) + 5; // 随机5-15次
+            final int count = 2;
             System.out.println("开始执行 " + count + " 次操作...");
-
-            List<String>  urls = new ArrayList<>();
             for (int i = 0; i < count; i++) {
                 // 无法加载网页 关闭
                 if(page.url().contains("chrome-")){
@@ -193,7 +202,7 @@ public class JvppeteerSwipe {
             // 截图
 //            page.screenshot("jvppeteer_example.png");
             System.out.println("截图已保存: jvppeteer_example.png");
-//            browser.close();
+            browser.close();
         } catch (Exception e) {
             System.err.println("jvppeteer滑动失败: " + e.getMessage());
             e.printStackTrace();
@@ -287,7 +296,8 @@ public class JvppeteerSwipe {
 //                recorder.recordClick(randomClick, "click_" + (i + 1));
 
                 // 执行点击
-                performTouchClick(page, randomClick.x, randomClick.y);
+                boolean succ = performTouchClick(page, randomClick.x, randomClick.y);
+                if(!succ){ break;}
                 Thread.sleep(200);
             }
 
@@ -303,7 +313,7 @@ public class JvppeteerSwipe {
     /**
      * 执行触摸点击
      */
-    private static void performTouchClick(Page page, int x, int y) {
+    private static boolean performTouchClick(Page page, int x, int y) {
         try {
             ObjectMapper mapper = new ObjectMapper();
             ObjectNode touchConfig = mapper.createObjectNode();
@@ -319,7 +329,9 @@ public class JvppeteerSwipe {
 
         } catch (Exception e) {
             System.err.println("触摸点击失败: " + e.getMessage());
+            return false;
         }
+        return true;
     }
 
     static void injectLog(Page page) throws JsonProcessingException {
