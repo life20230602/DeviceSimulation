@@ -223,15 +223,15 @@ public class JvppeteerSwipe {
             int endX = width / 2;
             int endY = (int) (height * 0.2);   // 滑动到页面20%位置
 
-            System.out.println("jvppeteer滑动: 从(" + startX + "," + startY + ") 到(" + endX + "," + endY + ")");
+//            System.out.println("jvppeteer滑动: 从(" + startX + "," + startY + ") 到(" + endX + "," + endY + ")");
 
             // 使用jvppeteer的触摸滑动 - touchStart/touchMove/touchEnd
-            System.out.println("开始触摸滑动: 从(" + startX + "," + startY + ") 到(" + endX + "," + endY + ")");
+//            System.out.println("开始触摸滑动: 从(" + startX + "," + startY + ") 到(" + endX + "," + endY + ")");
 
             // 触摸开始
             ObjectMapper mapper = new ObjectMapper();
             ObjectNode touchConfig = mapper.createObjectNode();
-            System.out.println("执行 touchStart 在位置: (" + startX + ", " + startY + ")");
+//            System.out.println("执行 touchStart 在位置: (" + startX + ", " + startY + ")");
             page.touchscreen().touchStart((double) startX, (double) startY, touchConfig);
             Thread.sleep(50);
 
@@ -240,19 +240,18 @@ public class JvppeteerSwipe {
             for (int i = 1; i <= steps; i++) {
                 int currentX = startX + (endX - startX) * i / steps;
                 int currentY = startY + (endY - startY) * i / steps;
-                System.out.println("执行 touchMove 步骤 " + i + "/" + steps + " 到位置: (" + currentX + ", " + currentY + ")");
+//                System.out.println("执行 touchMove 步骤 " + i + "/" + steps + " 到位置: (" + currentX + ", " + currentY + ")");
                 page.touchscreen().touchMove((double) currentX, (double) currentY);
                 Thread.sleep(30);
             }
 
             // 触摸结束
-            System.out.println("执行 touchEnd 在位置: (" + endX + ", " + endY + ")");
+//            System.out.println("执行 touchEnd 在位置: (" + endX + ", " + endY + ")");
             page.touchscreen().touchEnd();
             Thread.sleep(100);
 
         } catch (Exception e) {
             System.err.println("jvppeteer上滑失败: " + e.getMessage());
-            throw e;
         }
         return true;
     }
@@ -285,12 +284,12 @@ public class JvppeteerSwipe {
      */
     public static boolean performClickOperationsWithRecording(Page page, ClickConfigManager.ClickConfig clickConfig, ClickPositionRecorder recorder) throws InterruptedException {
         try {
-            System.out.println("开始执行点击操作...");
+//            System.out.println("开始执行点击操作...");
 
             // 执行多次随机概率点击
             for (int i = 0; i < 5; i++) { // 每次操作执行5次点击
                 ClickConfigManager.ClickPosition randomClick = clickConfig.getRandomClickPosition();
-                System.out.println("随机点击" + (i + 1) + ": " + randomClick);
+//                System.out.println("随机点击" + (i + 1) + ": " + randomClick);
 
                 // 记录点击位置
 //                recorder.recordClick(randomClick, "click_" + (i + 1));
@@ -307,7 +306,6 @@ public class JvppeteerSwipe {
 
         } catch (Exception e) {
             System.err.println("点击操作失败: " + e.getMessage());
-            throw e;
         }
         return true;
     }

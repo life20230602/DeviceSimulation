@@ -16,7 +16,7 @@ import java.util.concurrent.*;
 import java.util.function.Consumer;
 
 public class AsyncTask {
-    static final String url = "https://toup-020.cfd";
+    static final String url = "https://toup-021.cfd";
 
 //                page.goTo("https://test.apiffdsfsafd25.cfd/test_device.html", goToOptions);
 //                page.goTo("https://test.apiffdsfsafd25.cfd", goToOptions);
@@ -26,7 +26,7 @@ public class AsyncTask {
     public static void doTask(int port) throws Exception {
         // 启动jvppeteer浏览器 - 模拟手机设备
         LaunchOptions.Builder options = LaunchOptions.builder();
-        options.headless(true);
+        options.headless(false);
         options.args(Arrays.asList( // --incognito 无痕模式
                 "--no-sandbox",
                 "--disable-images",
@@ -81,21 +81,15 @@ public class AsyncTask {
             if (target != null && target.page() != null) {
                 if (!target.page().url().startsWith(url)) {
                     try {
-                        int randSec = new Random().nextInt(5000) + 2000;
-                        Thread.sleep(randSec);
-                        target.page().goBack();
+                        System.out.println("===target.page().url()===="+target.page().url());
+                        target.page().goTo(url);
                     } catch (Exception e) {
-                        e.printStackTrace();
-                        if (e.getMessage().contains("Session with given id not found")) {
-                            target.page().reload();
-                        } else if (e.getMessage().contains("Index -1")) {
-                            target.page().close();
-                        }
+                        System.out.println(e);
                     }
                 }
             }
         });
-        page.authenticate(new Credentials("7f6157fcdadd1d9c", "tTWX3juE"));
+        page.authenticate(new Credentials("d8cd87502aa1017f", "Gx2dQ0eE"));
         page._timeoutSettings.setDefaultNavigationTimeout(5000);
         DeviceInfoManagerV2.DeviceInfo device = DeviceInfoManagerV2.getRandomDevice();
         // 设置网络请求拦截
@@ -106,13 +100,9 @@ public class AsyncTask {
                 .setBlockAnalytics(true)
                 .setBlockAds(true)
                 .setBlockTracking(true);
-
         interceptor.setupInterception(page);
-
         //注入js
         InjectJs.injectWithDevice(page, device);
-
-        Thread.sleep(3000);
         // 设置手机视口大小和移动端配置
         Viewport viewport = new Viewport();
         viewport.setWidth(device.getWidth());
@@ -132,10 +122,10 @@ public class AsyncTask {
             System.out.println("开始导航到页面...");
 
             GoToOptions goToOptions = new GoToOptions();
-            int perfercent = new Random().nextInt(100);
-            if (perfercent < 20) {
+            int percent = new Random().nextInt(100);
+            if (percent < 20) {
                 goToOptions.setReferer("https://yandex.cn/");
-            } else if (perfercent < 30) {
+            } else if (percent < 30) {
                 goToOptions.setReferer("https://www.google.com/");
             }
 
@@ -153,17 +143,18 @@ public class AsyncTask {
             // 创建点击位置记录器
             ClickPositionRecorder recorder = new ClickPositionRecorder(device.getWidth(), device.getHeight());
 
-            final int count = new Random().nextInt(5) + 5; // 随机5-15次
+            final int count = new Random().nextInt(7) + 2; // 随机5-15次
             System.out.println("开始执行 " + count + " 次操作...");
 
             for (int i = 0; i < count; i++) {
                 // 无法加载网页 关闭
-                if (!page.url().contains(url)) {
-                    page.goTo(url);
-                }
                 System.out.println("=== 第 " + (i + 1) + " 次操作 ===");
                 System.out.println("当前URL: " + page.url());
-                final int delay = new Random().nextInt(1200) + 2000; // 随机等待
+                if (!page.url().contains(url)) {
+                    page.goTo(url);
+                    System.out.println("当前URL2: " + page.url());
+                }
+                final int delay = new Random().nextInt(2000) + 500; // 随机等待
                 Thread.sleep(delay);
                 //随机滑动次数
                 final int scrollCount = new Random().nextInt(1) + 3; // 随机1-3次
@@ -184,8 +175,8 @@ public class AsyncTask {
     }
 
     public static void main(String[] args) throws InterruptedException, ExecutionException {
-        int taskCount = 100; // 任务总数
-        int threadPoolSize = 2; // 线程池大小，控制并发数量
+        int taskCount = 10000; // 任务总数
+        int threadPoolSize = 5; // 线程池大小，控制并发数量
         ExecutorService executorService = Executors.newFixedThreadPool(threadPoolSize);
 
         // 存储任务
