@@ -270,3 +270,4 @@ public class ClickPositionRecorder {
         System.out.println("==================");
     }
 }
+

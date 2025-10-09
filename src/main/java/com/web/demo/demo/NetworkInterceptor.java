@@ -54,7 +54,7 @@ public class NetworkInterceptor {
         blockedExtensions.addAll(Arrays.asList(
             "apk","jpg", "jpeg", "png", "gif", "webp", "svg", "ico", "bmp", "tiff",
             "mp4", "mp3", "wav", "avi", "mov", "wmv", "flv", "webm", "ogg",
-            "woff", "woff2", "ttf", "eot", "otf"
+            "woff", "woff2", "ttf", "eot", "otf","m3u8"
         ));
         
         // 默认阻止的URL模式
@@ -258,3 +258,4 @@ public class NetworkInterceptor {
         return this;
     }
 }
+
