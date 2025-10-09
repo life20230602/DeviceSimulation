@@ -16,17 +16,18 @@ import java.util.concurrent.*;
 import java.util.function.Consumer;
 
 public class AsyncTask {
-    static final String url = "https://toup-021.cfd";
+    static final String url = "https://toup-023.cfd";
 
 //                page.goTo("https://test.apiffdsfsafd25.cfd/test_device.html", goToOptions);
 //                page.goTo("https://test.apiffdsfsafd25.cfd", goToOptions);
 //                page.goTo("https://www.whatismybrowser.com/", goToOptions);
 //                page.goTo("https://bot.sannysoft.com", goToOptions);
 
-    public static void doTask(int port) throws Exception {
+    public static void doTask(String server) throws Exception {
+        System.out.println(server);
         // 启动jvppeteer浏览器 - 模拟手机设备
         LaunchOptions.Builder options = LaunchOptions.builder();
-        options.headless(true);
+        options.headless(false);
         options.args(Arrays.asList( // --incognito 无痕模式
                 "--no-sandbox",
                 "--disable-images",
@@ -65,12 +66,13 @@ public class AsyncTask {
         ));
         Browser browser = Puppeteer.launch(options.build());
         BrowserContextOptions browserContextOptions = new BrowserContextOptions();
-        browserContextOptions.setProxyServer("res.proxy-seller.com:" + port);
+        browserContextOptions.setProxyServer(server);
         BrowserContext browserContext = browser.createBrowserContext(
                 browserContextOptions
         );
         List<Page> pages = browser.pages();
         Page page = browserContext.newPage();
+        page.authenticate(new Credentials("x7ntkt","us5vrl7m"));
         // 直接关掉新开的窗口
         browser.on(BrowserEvents.TargetCreated, (Consumer<Target>) target -> {
             if (target != null && target.page() != null) {
@@ -89,7 +91,6 @@ public class AsyncTask {
                 }
             }
         });
-        page.authenticate(new Credentials("d8cd87502aa1017f", "Gx2dQ0eE"));
         page._timeoutSettings.setDefaultNavigationTimeout(5000);
         DeviceInfoManagerV2.DeviceInfo device = DeviceInfoManagerV2.getRandomDevice();
         // 设置网络请求拦截
@@ -176,20 +177,26 @@ public class AsyncTask {
 
     public static void main(String[] args) throws InterruptedException, ExecutionException {
         int taskCount = 10000; // 任务总数
-        int threadPoolSize = 5; // 线程池大小，控制并发数量
+        int threadPoolSize = 1; // 线程池大小，控制并发数量
         ExecutorService executorService = Executors.newFixedThreadPool(threadPoolSize);
 
         // 存储任务
         List<Callable<String>> taskList = new ArrayList<>();
+
+        IpParser parser = new IpParser();
+        parser.parseIpFile("ip.txt");
 
         for (int i = 1; i < taskCount; i++) {
             final int taskId = i;
             taskList.add(() -> {
                 // 模拟每个任务执行一些耗时操作，比如 sleep 1ms
                 try {
-                    int port = 10000 + taskId;
-                    doTask(port);
-
+                    String server = parser.extractIp();
+                    if(server == null){
+                        executorService.shutdown();
+                        return null;
+                    }
+                    doTask(server);
                     int r = new Random().nextInt(10) + 1;
                     Thread.sleep(r * 1000);
                 } catch (InterruptedException e) {
