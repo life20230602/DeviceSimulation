@@ -41,6 +41,9 @@ public class InjectJs{
              // 电池信息 返回null
              page.evaluateOnNewDocument("() =>{ Object.defineProperty(navigator, 'getBattery', { get: () => {} }); }");
 
+             // quodng
+             page.evaluateOnNewDocument("() =>{ Object.defineProperty(navigator, 'webdriver', { get: () => false }); }");
+
              // 注入网络
 //             navigator.connection || navigator.mozConnection || navigator.webkitConnection
 
