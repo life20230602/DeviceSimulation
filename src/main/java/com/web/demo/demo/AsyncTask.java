@@ -7,6 +7,7 @@ import com.ruiyun.jvppeteer.api.core.Target;
 import com.ruiyun.jvppeteer.api.events.BrowserEvents;
 import com.ruiyun.jvppeteer.cdp.core.Puppeteer;
 import com.ruiyun.jvppeteer.cdp.entities.*;
+import com.web.demo.demo.pojo.IpData;
 
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -23,8 +24,9 @@ public class AsyncTask {
 //                page.goTo("https://www.whatismybrowser.com/", goToOptions);
 //                page.goTo("https://bot.sannysoft.com", goToOptions);
 
-    public static void doTask(String server) throws Exception {
-        System.out.println(server);
+    public static void doTask(IpData ipData) throws Exception {
+        System.out.println("DoTask 代理信息, " + ipData);
+        if(ipData==null){ return; }
         // 启动jvppeteer浏览器 - 模拟手机设备
         LaunchOptions.Builder options = LaunchOptions.builder();
         options.headless(false);
@@ -64,15 +66,16 @@ public class AsyncTask {
                 "--disable-features=PerformanceHints",
                 "--disable-features=PerformanceManager"
         ));
+
         Browser browser = Puppeteer.launch(options.build());
         BrowserContextOptions browserContextOptions = new BrowserContextOptions();
-        browserContextOptions.setProxyServer(server);
+        browserContextOptions.setProxyServer(ipData.getIp()+":"+ipData.getPort());
         BrowserContext browserContext = browser.createBrowserContext(
                 browserContextOptions
         );
         List<Page> pages = browser.pages();
         Page page = browserContext.newPage();
-        page.authenticate(new Credentials("x7ntkt","us5vrl7m"));
+        page.authenticate(new Credentials("b6fn4y","g36qk8x3"));
         // 直接关掉新开的窗口
         browser.on(BrowserEvents.TargetCreated, (Consumer<Target>) target -> {
             if (target != null && target.page() != null) {
@@ -84,9 +87,11 @@ public class AsyncTask {
                 if (!target.page().url().startsWith(url)) {
                     try {
                         System.out.println("===target.page().url()===="+target.page().url());
-                        target.page().goTo(url);
+                        GoToOptions goToOptions = new GoToOptions();
+                        goToOptions.setReferer(target.page().url());
+                        target.page().goTo(url,goToOptions);
                     } catch (Exception e) {
-                        System.out.println(e);
+                        System.out.println("跳转其他链接失败: "+e);
                     }
                 }
             }
@@ -136,6 +141,8 @@ public class AsyncTask {
 //            injectLog(page);
         } catch (Exception e) {
             System.err.println("页面导航失败: " + e.getMessage());
+            browser.close();
+            return;
         }
         try {
             ClickConfigManager.ClickConfig clickConfig = new ClickConfigManager.ClickConfig(
@@ -183,20 +190,25 @@ public class AsyncTask {
         // 存储任务
         List<Callable<String>> taskList = new ArrayList<>();
 
-        IpParser parser = new IpParser();
-        parser.parseIpFile("ip.txt");
+//        IpParser parser = new IpParser();
+//        parser.parseIpFile("ip.txt");
 
         for (int i = 1; i < taskCount; i++) {
             final int taskId = i;
             taskList.add(() -> {
                 // 模拟每个任务执行一些耗时操作，比如 sleep 1ms
                 try {
-                    String server = parser.extractIp();
-                    if(server == null){
-                        executorService.shutdown();
+                    IpData ipData = ShenLongIPService.GetIp();
+                    if(ipData==null){
+                        System.out.println("ipData is null");
                         return null;
                     }
-                    doTask(server);
+//                    String server = parser.extractIp();
+//                    if(server == null){
+//                        executorService.shutdown();
+//                        return null;
+//                    }
+                    doTask(ipData);
                     int r = new Random().nextInt(10) + 1;
                     Thread.sleep(r * 1000);
                 } catch (InterruptedException e) {

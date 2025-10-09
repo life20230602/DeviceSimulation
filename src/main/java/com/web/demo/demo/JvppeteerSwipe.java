@@ -7,6 +7,7 @@ import com.ruiyun.jvppeteer.api.core.*;
 import com.ruiyun.jvppeteer.api.events.BrowserEvents;
 import com.ruiyun.jvppeteer.cdp.core.Puppeteer;
 import com.ruiyun.jvppeteer.cdp.entities.*;
+import com.web.demo.demo.pojo.IpData;
 
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -61,15 +62,20 @@ public class JvppeteerSwipe {
                     "--disable-features=PerformanceHints",
                     "--disable-features=PerformanceManager"
             ));
+            IpData ipData = ShenLongIPService.GetIp();
+            if(ipData==null){
+                System.out.println("ipData is null");
+                return;
+            }
             Browser browser = Puppeteer.launch(options.build());
             BrowserContextOptions browserContextOptions = new BrowserContextOptions();
-            browserContextOptions.setProxyServer("res.proxy-seller.com:10001");
+            browserContextOptions.setProxyServer(ipData.getIp()+":"+ipData.getPort());
             BrowserContext browserContext = browser.createBrowserContext(
                     browserContextOptions
             );
             List<Page> pages = browser.pages();
-//            Page page = browserContext.newPage();
-            Page page = browser.newPage();
+            Page page = browserContext.newPage();
+//            Page page = browser.new   Page();
             // 直接关掉新开的窗口
             browser.on(BrowserEvents.TargetCreated, (Consumer<Target>) target -> {
                 if (target != null && target.page() != null) {
@@ -82,19 +88,19 @@ public class JvppeteerSwipe {
                         try {
                             int randSec = new Random().nextInt(3000) + 3000;
                             Thread.sleep(randSec);
-                            target.page().goBack();
+//                            target.page().goBack();
                         } catch (Exception e) {
                             e.printStackTrace();
                             if (e.getMessage().contains("Session with given id not found")) {
-                                target.page().reload();
+//                                target.page().reload();
                             } else if (e.getMessage().contains("Index -1")) {
-                                target.page().close();
+//                                target.page().close();
                             }
                         }
                     }
                 }
             });
-            page.authenticate(new Credentials("7f6157fcdadd1d9c", "tTWX3juE"));
+            page.authenticate(new Credentials("x7ntkt", "us5vrl7m"));
             page._timeoutSettings.setDefaultNavigationTimeout(3000);
             DeviceInfoManagerV2.DeviceInfo device = DeviceInfoManagerV2.getRandomDevice();
             System.out.println(new ObjectMapper().writeValueAsString(device));
@@ -129,7 +135,7 @@ public class JvppeteerSwipe {
                 if (!pages.isEmpty()) {
                     pages.get(0).close();
                 }
-                System.out.println("开始导航到页面...");
+                System.out.println(ipData+", 开始导航到页面...");
 
                 GoToOptions goToOptions = new GoToOptions();
                 int perfercent = new Random().nextInt(100);
@@ -145,10 +151,12 @@ public class JvppeteerSwipe {
 //                page.goTo("https://www.whatismybrowser.com/", goToOptions);
 //                page.goTo("https://bot.sannysoft.com", goToOptions);
                 page.goTo("https://toup-020.cfd", goToOptions);
+//                page.goTo("https://www.ip138.com/", goToOptions);
                 System.out.println("页面导航完成");
                 injectLog(page);
             } catch (Exception e) {
                 System.err.println("页面导航失败: " + e.getMessage());
+                return;
             }
 
             ClickConfigManager.ClickConfig clickConfig = new ClickConfigManager.ClickConfig(
@@ -159,7 +167,7 @@ public class JvppeteerSwipe {
             ClickPositionRecorder recorder = new ClickPositionRecorder(device.getWidth(), device.getHeight());
 
 //            final int count = new Random().nextInt(11) + 5; // 随机5-15次
-            final int count = 2;
+            final int count = 0;
             System.out.println("开始执行 " + count + " 次操作...");
             for (int i = 0; i < count; i++) {
                 // 无法加载网页 关闭

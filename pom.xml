@@ -43,6 +43,10 @@
             <artifactId>jvppeteer</artifactId>
             <version>3.4.1</version>
         </dependency>
+        <dependency>
+            <groupId>com.google.code.gson</groupId>
+            <artifactId>gson</artifactId>
+        </dependency>
     </dependencies>
 
     <build>
