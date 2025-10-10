@@ -29,7 +29,7 @@ public class AsyncTask {
         if(ipData==null){ return; }
         // 启动jvppeteer浏览器 - 模拟手机设备
         LaunchOptions.Builder options = LaunchOptions.builder();
-        options.headless(false);
+        options.headless(true);
         options.args(Arrays.asList( // --incognito 无痕模式
                 "--no-sandbox",
                 "--disable-images",
@@ -184,7 +184,7 @@ public class AsyncTask {
 
     public static void main(String[] args) throws InterruptedException, ExecutionException {
         int taskCount = 10000; // 任务总数
-        int threadPoolSize = 1; // 线程池大小，控制并发数量
+        int threadPoolSize = 2; // 线程池大小，控制并发数量
         ExecutorService executorService = Executors.newFixedThreadPool(threadPoolSize);
 
         // 存储任务
