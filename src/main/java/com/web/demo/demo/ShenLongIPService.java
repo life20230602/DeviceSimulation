@@ -13,13 +13,21 @@ import java.util.List;
 public class ShenLongIPService {
 
     public static void main(String[] args) {
-        IpData ipData = GetIp();
-        System.out.println("ipData: " + ipData);
-    }
-    public static IpData GetIp() {
-        try {
-            String url = "http://api.shenlongip.com/ip?key=lr7ju4bn&protocol=1&mr=1&pattern=json&need=1101&count=1&sign=8551d46e63a71a913a023227f0786b3a";
+        String url = "http://api.shenlongip.com/ip?key=lr7ju4bn&protocol=1&mr=1&pattern=json&need=1101&count=1&sign=8551d46e63a71a913a023227f0786b3a";
 
+//        IpData ipData = GetIps(url);
+//        System.out.println("ipData: " + ipData);
+    }
+    public static IpData GetIp(String url) {
+        List<IpData>  ipDatas = GetIps(url);
+        if (ipDatas == null || ipDatas.size() == 0) {
+            return null;
+        }
+        return ipDatas.get(0);
+    }
+
+    public static List<IpData> GetIps(String url) {
+        try {
             // 创建 URL 对象
             URL obj = new URL(url);
             HttpURLConnection con = (HttpURLConnection) obj.openConnection();
@@ -51,12 +59,10 @@ public class ShenLongIPService {
             if(req == null || req.getData().isEmpty()){
                 return null;
             }
-            return req.getData().get(0);
+            return req.getData();
         } catch (Exception e) {
             e.printStackTrace();
         }
         return null;
     }
-
-
 }

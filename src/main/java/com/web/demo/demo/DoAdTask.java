@@ -7,26 +7,21 @@ import com.ruiyun.jvppeteer.api.core.Target;
 import com.ruiyun.jvppeteer.api.events.BrowserEvents;
 import com.ruiyun.jvppeteer.cdp.core.Puppeteer;
 import com.ruiyun.jvppeteer.cdp.entities.*;
+import com.web.demo.demo.pojo.DoAdTaskPojo;
 import com.web.demo.demo.pojo.IpData;
 
-import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
 import java.util.Random;
-import java.util.concurrent.*;
+import java.util.concurrent.Callable;
 import java.util.function.Consumer;
 
-public class AsyncTask {
-    static final String url = "https://toup-023.cfd";
-
-//                page.goTo("https://test.apiffdsfsafd25.cfd/test_device.html", goToOptions);
-//                page.goTo("https://test.apiffdsfsafd25.cfd", goToOptions);
-//                page.goTo("https://www.whatismybrowser.com/", goToOptions);
-//                page.goTo("https://bot.sannysoft.com", goToOptions);
-
-    public static void doTask(IpData ipData) throws Exception {
-        System.out.println("DoTask 代理信息, " + ipData);
-        if(ipData==null){ return; }
+public class DoAdTask implements Callable {
+    private DoAdTaskPojo taskPojo;
+    public DoAdTask(DoAdTaskPojo taskPojo) {
+        this.taskPojo = taskPojo;
+    }
+    public Object call() throws Exception {
         // 启动jvppeteer浏览器 - 模拟手机设备
         LaunchOptions.Builder options = LaunchOptions.builder();
         options.headless(true);
@@ -69,13 +64,13 @@ public class AsyncTask {
 
         Browser browser = Puppeteer.launch(options.build());
         BrowserContextOptions browserContextOptions = new BrowserContextOptions();
-        browserContextOptions.setProxyServer(ipData.getIp()+":"+ipData.getPort());
+        browserContextOptions.setProxyServer(taskPojo.getIp()+":"+taskPojo.getPort());
         BrowserContext browserContext = browser.createBrowserContext(
                 browserContextOptions
         );
         List<Page> pages = browser.pages();
         Page page = browserContext.newPage();
-        page.authenticate(new Credentials("b6fn4y","g36qk8x3"));
+        page.authenticate(new Credentials(taskPojo.getProxyUserName(),taskPojo.getProxyPassword()));
         // 直接关掉新开的窗口
         browser.on(BrowserEvents.TargetCreated, (Consumer<Target>) target -> {
             if (target != null && target.page() != null) {
@@ -84,12 +79,12 @@ public class AsyncTask {
         });
         browser.on(BrowserEvents.TargetChanged, (Consumer<Target>) target -> {
             if (target != null && target.page() != null) {
-                if (!target.page().url().startsWith(url)) {
+                if (!target.page().url().startsWith(taskPojo.getUrl())) {
                     try {
                         System.out.println("===target.page().url()===="+target.page().url());
                         GoToOptions goToOptions = new GoToOptions();
                         goToOptions.setReferer(target.page().url());
-                        target.page().goTo(url,goToOptions);
+                        target.page().goTo(taskPojo.getUrl(),goToOptions);
                     } catch (Exception e) {
                         System.out.println("跳转其他链接失败: "+e);
                     }
@@ -136,13 +131,13 @@ public class AsyncTask {
             }
 
             goToOptions.setTimeout(5000);
-            page.goTo(url, goToOptions);
+            page.goTo(taskPojo.getUrl(), goToOptions);
             System.out.println("页面导航完成");
 //            injectLog(page);
         } catch (Exception e) {
             System.err.println("页面导航失败: " + e.getMessage());
             browser.close();
-            return;
+            return null;
         }
         try {
             ClickConfigManager.ClickConfig clickConfig = new ClickConfigManager.ClickConfig(
@@ -158,8 +153,10 @@ public class AsyncTask {
                 // 无法加载网页 关闭
                 System.out.println("=== 第 " + (i + 1) + " 次操作 ===");
                 System.out.println("当前URL: " + page.url());
-                if (!page.url().contains(url)) {
-                    page.goTo(url);
+                if (!page.url().contains(taskPojo.getUrl())) {
+                    GoToOptions goToOptions = new GoToOptions();
+                    goToOptions.setReferer(page.url());
+                    page.goTo(taskPojo.getUrl(),goToOptions);
                     System.out.println("当前URL2: " + page.url());
                 }
                 final int delay = new Random().nextInt(2000) + 500; // 随机等待
@@ -180,61 +177,7 @@ public class AsyncTask {
             browser.close();
             page.close();
         }
+        return null;
     }
 
-    public static void main(String[] args) throws InterruptedException, ExecutionException {
-        int taskCount = 10000; // 任务总数
-        int threadPoolSize = 2; // 线程池大小，控制并发数量
-        ExecutorService executorService = Executors.newFixedThreadPool(threadPoolSize);
-
-        // 存储任务
-        List<Callable<String>> taskList = new ArrayList<>();
-
-//        IpParser parser = new IpParser();
-//        parser.parseIpFile("ip.txt");
-
-        for (int i = 1; i < taskCount; i++) {
-            final int taskId = i;
-            taskList.add(() -> {
-                // 模拟每个任务执行一些耗时操作，比如 sleep 1ms
-                try {
-                    IpData ipData = ShenLongIPService.GetIp("");
-                    if(ipData==null){
-                        System.out.println("ipData is null");
-                        return null;
-                    }
-//                    String server = parser.extractIp();
-//                    if(server == null){
-//                        executorService.shutdown();
-//                        return null;
-//                    }
-                    doTask(ipData);
-                    int r = new Random().nextInt(10) + 1;
-                    Thread.sleep(r * 1000);
-                } catch (InterruptedException e) {
-                    Thread.currentThread().interrupt();
-                }
-                return "Task " + taskId + " completed.";
-            });
-        }
-
-        // 使用 invokeAll 批量提交任务，并等待所有任务完成
-        long startTime = System.nanoTime();
-        List<Future<String>> futures = executorService.invokeAll(taskList);
-
-        // 获取每个任务的执行结果
-        for (Future<String> future : futures) {
-            // 只获取任务结果，但不打印，避免性能瓶颈
-            future.get();  // 这里我们并不关心返回值，只是等待任务完成
-        }
-
-        long endTime = System.nanoTime();
-
-        // 计算执行时间
-        long duration = endTime - startTime;
-        System.out.println("All tasks completed in: " + duration / 1_000_000 + " ms");
-
-        // 关闭线程池
-        executorService.shutdown();
-    }
 }

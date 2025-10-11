@@ -121,22 +121,22 @@ public class InjectJs{
      * 根据设备信息获取 WebGL 渲染器
      */
     private static String getWebGLRenderer(DeviceInfoManagerV2.DeviceInfo deviceInfo) {
-        if (deviceInfo.getBrand().equals("Apple")) {
+        if (deviceInfo.getBrand().equalsIgnoreCase("Apple")) {
             // iOS 设备使用 Apple GPU
             return "Apple GPU";
-        } else if (deviceInfo.getBrand().equals("Huawei") || deviceInfo.getBrand().equals("Honor")) {
+        } else if (deviceInfo.getBrand().equalsIgnoreCase("Huawei") || deviceInfo.getBrand().equalsIgnoreCase("Honor")) {
             // 华为/荣耀设备
             return "Mali-G78 MP14";
-        } else if (deviceInfo.getBrand().equals("Xiaomi")) {
+        } else if (deviceInfo.getBrand().equalsIgnoreCase("Xiaomi")) {
             // 小米设备
             return "Adreno (TM) 650";
-        } else if (deviceInfo.getBrand().equals("Vivo")) {
+        } else if (deviceInfo.getBrand().equalsIgnoreCase("Vivo")) {
             // Vivo 设备
             return "Mali-G76 MP16";
-        } else if (deviceInfo.getBrand().equals("Oppo")) {
+        } else if (deviceInfo.getBrand().equalsIgnoreCase("Oppo")) {
             // OPPO 设备
             return "Adreno (TM) 640";
-        } else if (deviceInfo.getBrand().equals("Samsung")) {
+        } else if (deviceInfo.getBrand().equalsIgnoreCase("Samsung")) {
             // 三星设备
             return "Mali-G78 MP14";
         } else {

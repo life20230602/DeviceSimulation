@@ -62,7 +62,7 @@ public class JvppeteerSwipe {
                     "--disable-features=PerformanceHints",
                     "--disable-features=PerformanceManager"
             ));
-            IpData ipData = ShenLongIPService.GetIp();
+            IpData ipData = ShenLongIPService.GetIp("");
             if(ipData==null){
                 System.out.println("ipData is null");
                 return;
