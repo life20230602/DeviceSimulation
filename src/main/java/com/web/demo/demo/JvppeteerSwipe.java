@@ -295,7 +295,8 @@ public class JvppeteerSwipe {
 //            System.out.println("开始执行点击操作...");
 
             // 执行多次随机概率点击
-            for (int i = 0; i < 5; i++) { // 每次操作执行5次点击
+            int count = new Random().nextInt(5);
+            for (int i = 0; i < count; i++) {
                 ClickConfigManager.ClickPosition randomClick = clickConfig.getRandomClickPosition();
 //                System.out.println("随机点击" + (i + 1) + ": " + randomClick);
 
@@ -310,7 +311,7 @@ public class JvppeteerSwipe {
                 Thread.sleep(200);
             }
 
-            System.out.println("点击操作完成！");
+            System.out.println("随机点击"+count+"次,操作完成！");
 
         } catch (Exception e) {
             System.err.println("点击操作失败: " + e.getMessage());

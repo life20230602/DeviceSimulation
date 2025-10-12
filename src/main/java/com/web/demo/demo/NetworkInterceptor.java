@@ -89,9 +89,9 @@ public class NetworkInterceptor {
                     String url = request.url();
                     ResourceType resourceType = request.resourceType();
                     // 打印请求信息
-                    if( url.contains("statistics")){
-                        System.out.println("加载统计js: "+ url);
-                    }
+//                    if( url.contains("statistics")){
+//                        System.out.println("加载统计js: "+ url);
+//                    }
                     // 判断是否应该阻止请求
                     if (shouldBlockRequest(url, resourceType)) {
                         blockedRequests++;

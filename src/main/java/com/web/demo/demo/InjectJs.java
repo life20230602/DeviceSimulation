@@ -62,7 +62,7 @@ public class InjectJs{
             String webglVendor = getWebGLVendor(deviceInfo);
             String webglVersion = getWebGLVersion(deviceInfo);
             
-            System.out.println("注入 WebGL 信息 - 渲染器: " + webglRenderer + ", 供应商: " + webglVendor + ", 版本: " + webglVersion);
+            System.out.println(deviceInfo+",注入 WebGL 信息 - 渲染器: " + webglRenderer + ", 供应商: " + webglVendor + ", 版本: " + webglVersion);
             
             // 使用 Proxy 方案注入 WebGL 信息
             String webglScript = 
