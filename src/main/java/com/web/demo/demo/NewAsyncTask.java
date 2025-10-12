@@ -3,15 +3,21 @@ package com.web.demo.demo;
 import com.web.demo.demo.pojo.DoAdTaskPojo;
 import com.web.demo.demo.pojo.IpData;
 
+import java.io.FileInputStream;
+import java.io.IOException;
+import java.io.InputStream;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Properties;
 import java.util.Random;
 import java.util.concurrent.*;
+import java.util.concurrent.atomic.AtomicInteger;
 
 public class NewAsyncTask {
-    // 神龙ip代理服务接口地址
-    private static String url = "http://api.shenlongip.com/ip?key=lr7ju4bn&protocol=1&mr=1&pattern=json&need=1101&count=5&sign=8551d46e63a71a913a023227f0786b3a";
-    private static String targetUrl = "https://toup-023.cfd";
+    private static final AtomicInteger atomicInteger = new AtomicInteger(0);
+    public static void incrementSuccessCount(){
+        atomicInteger.incrementAndGet();
+    }
     private static final ThreadPoolExecutor executor = new ThreadPoolExecutor(
             10,               // 核心线程数
             20,                         // 最大线程数
@@ -21,10 +27,29 @@ public class NewAsyncTask {
             new ThreadPoolExecutor.AbortPolicy() // 拒绝策略
     );
     public static void main(String[] args) {
+        Properties prop = new Properties();
+        String ipApiUrl = "";
+        String targetUrl = "";
+        try {
+            // 加载properties文件，这里使用ClassLoader来获取资源流
+            InputStream input = NewAsyncTask.class.getClassLoader().getResourceAsStream("application.properties");
+            if (input == null) {
+                System.out.println("Sorry, unable to find application.properties");
+                return;
+            }
+
+            // 加载属性值
+            prop.load(input);
+            // 获取属性值
+             ipApiUrl = prop.getProperty("ipApiUrl");
+             targetUrl = prop.getProperty("targetUrl");
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
         DeviceInfoManagerV2.DeviceInfo device = DeviceInfoManagerV2.getRandomDevice();
         int retryCount = 1;
         for (;true;) {
-            List<IpData> ipDataList = ShenLongIPService.GetIps(url);
+            List<IpData> ipDataList = ShenLongIPService.GetIps(ipApiUrl);
             if (ipDataList == null || ipDataList.size() == 0) {
                 retryCount++;
                 continue;
@@ -40,7 +65,7 @@ public class NewAsyncTask {
                 }
                 int delay =  new Random().nextInt(20) + 10;
                 Thread.sleep(delay*1000); // 随机加5个
-                System.out.println("已完成: "+ executor.getCompletedTaskCount()+"-,任务总数: "+ executor.getTaskCount());
+                System.out.println("实际已完成: "+atomicInteger.get()+",任务完成: "+ executor.getCompletedTaskCount()+"-,任务总数: "+ executor.getTaskCount());
             }catch (Exception e){
                System.out.println("执行任务异常, "+e);
             }

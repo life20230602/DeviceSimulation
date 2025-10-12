@@ -198,6 +198,7 @@ public class DoAdTask implements Callable {
                    break;
                }
             }
+            NewAsyncTask.incrementSuccessCount();
         } finally {
             long endTime = System.currentTimeMillis();
             System.err.println( "完成耗时: "+(endTime-startTime)+" 毫秒");
