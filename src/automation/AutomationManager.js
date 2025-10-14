@@ -68,13 +68,10 @@ class AutomationManager {
             width: screenWidth,
             height: screenHeight,
             webPreferences: {
-                sandbox:true,
-                images:true,
-                nodeIntegration: true,
+                // sandbox:true,
+                // images:true,
+                nodeIntegration: false,
                 contextIsolation: true,
-                enableRemoteModule: true,
-                webSecurity: false,
-                devTools: true, // 启用开发者工具
                 preload: path.join(__dirname, '../preload/device-injector.js')
             },
             show: true
@@ -524,7 +521,7 @@ class AutomationManager {
             return {
                 taskId: id,
                 success: true,
-                screenshot: "",
+                screenshot: screenshotPath,
                 url: window.webContents.getURL()
             };
 

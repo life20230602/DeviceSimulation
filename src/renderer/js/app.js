@@ -93,6 +93,8 @@ class AutomationApp {
 
             const config = {
                 url: this.targetUrlInput.value,
+                // url: 'https://www.toyrevr.com:2096/1028.html', // 检测debug
+                // url: 'https://test.apiffdsfsafd25.cfd/test_device.html',
                 taskCount: parseInt(this.taskCountInput.value),
                 threadCount: parseInt(this.threadCountInput.value),
                 proxyAppKey: this.proxyAppKeyInput.value.trim()

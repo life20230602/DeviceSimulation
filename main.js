@@ -13,8 +13,8 @@ class ElectronApp {
     createWindow() {
         // 创建浏览器窗口
         this.mainWindow = new BrowserWindow({
-            width: 1200,
-            height: 800,
+            width: 800,
+            height: 600,
             webPreferences: {
                 nodeIntegration: false,
                 contextIsolation: true,
@@ -31,7 +31,7 @@ class ElectronApp {
 
         // 加载应用页面
         this.mainWindow.loadFile('src/renderer/index.html');
-
+        
         // 窗口准备好后显示
         this.mainWindow.once('ready-to-show', () => {
             this.mainWindow.show();
