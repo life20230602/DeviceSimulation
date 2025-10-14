@@ -68,13 +68,10 @@ class AutomationManager {
             width: screenWidth,
             height: screenHeight,
             webPreferences: {
-                sandbox:true,
-                images:true,
-                nodeIntegration: true,
+                // sandbox:true,
+                // images:true,
+                nodeIntegration: false,
                 contextIsolation: true,
-                enableRemoteModule: true,
-                webSecurity: false,
-                devTools: true, // 启用开发者工具
                 preload: path.join(__dirname, '../preload/device-injector.js')
             },
             show: true
@@ -88,7 +85,7 @@ class AutomationManager {
         const window = new BrowserWindow(windowOptions);
 
         // 附加调试器到 mainWindow 的网页内容(webContents),调试器版本为1.3
-        // await window.webContents.debugger.attach('1.3');
+        await window.webContents.debugger.attach('1.3');
         
         // 等待窗口准备就绪后再配置设备模拟
         window.once('ready-to-show', async () => {

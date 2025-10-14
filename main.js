@@ -31,7 +31,7 @@ class ElectronApp {
 
         // 加载应用页面
         this.mainWindow.loadFile('src/renderer/index.html');
-
+        
         // 窗口准备好后显示
         this.mainWindow.once('ready-to-show', () => {
             this.mainWindow.show();
