@@ -74,7 +74,7 @@ class AutomationManager {
                 contextIsolation: true,
                 enableRemoteModule: true,
                 webSecurity: false,
-                devTools: false, // 启用开发者工具
+                devTools: true, // 启用开发者工具
                 preload: path.join(__dirname, '../preload/device-injector.js')
             },
             show: true
