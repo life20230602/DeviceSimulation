@@ -1,0 +1,41 @@
+{
+  "name": "electron-automation-demo",
+  "version": "1.0.0",
+  "description": "Electron version of Java jvppeteer automation project",
+  "main": "main.js",
+  "scripts": {
+    "start": "electron .",
+    "dev": "electron . --dev",
+    "build": "electron-builder",
+    "test": "node test.js"
+  },
+  "dependencies": {
+    "canvas": "^3.2.0"
+  },
+  "devDependencies": {
+    "electron": "^38.2.2",
+    "electron-builder": "^24.13.3",
+    "nodemon": "^3.0.0"
+  },
+  "keywords": [
+    "electron",
+    "puppeteer",
+    "automation",
+    "web-scraping",
+    "mobile-emulation"
+  ],
+  "author": "",
+  "license": "MIT",
+  "build": {
+    "appId": "com.automation.demo",
+    "productName": "Automation Demo",
+    "directories": {
+      "output": "dist"
+    },
+    "files": [
+      "**/*",
+      "!node_modules",
+      "!dist"
+    ]
+  }
+}
