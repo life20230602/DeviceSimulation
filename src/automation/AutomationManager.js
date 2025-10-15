@@ -17,6 +17,8 @@ class AutomationManager {
         this.taskQueue = [];
         this.maxConcurrentTasks = 1;
         this.threadCount = 1;
+        this.touchSessions = new Map(); // 管理每个webContents的触摸会话状态
+        this.clickTimers = new Map(); // 管理每个webContents的定时点击器
     }
 
     /**
@@ -147,15 +149,15 @@ class AutomationManager {
         // 添加标志防止重复执行
         let hasExecutedAutomation = false;
         
-        window.webContents.on('did-navigate-in-page', async (event, navigationUrl) => {
-            this.logToMainWindow(`线程 ${threadId} 页面内导航到: ${navigationUrl}`, 'info');
+        // 监听页面导航事件
+        window.webContents.on('did-navigate', async (event, navigationUrl) => {
             
-            // 在页面导航后执行自动化操作（只执行一次）
+            // 在页面加载完成后执行自动化操作（只执行一次）
             if (!hasExecutedAutomation) {
                 hasExecutedAutomation = true;
                 try {
                     // 等待一段时间让页面稳定
-                    await new Promise(resolve => setTimeout(resolve, 2000));
+                    await new Promise(resolve => setTimeout(resolve, 3000));
                     
                     // 执行自动化操作
                     this.logToMainWindow(`线程 ${threadId} 开始执行自动化操作...`, 'info');
@@ -166,34 +168,10 @@ class AutomationManager {
                 }
             }
         });
-
-        // 监听页面加载状态
-        window.webContents.on('did-start-loading', () => {
-            this.logToMainWindow(`线程 ${threadId} 开始加载页面`, 'info');
-        });
-
-        window.webContents.on('did-stop-loading', () => {
-            this.logToMainWindow(`线程 ${threadId} 页面加载完成`, 'info');
-        });
-
-        window.webContents.on('did-finish-load', () => {
-            this.logToMainWindow(`线程 ${threadId} 页面完全加载完成`, 'success');
-        });
-
-        // 监听页面加载错误
-        window.webContents.on('did-fail-load', (event, errorCode, errorDescription, validatedURL) => {
-            this.logToMainWindow(`线程 ${threadId} 页面加载失败: ${errorCode} - ${errorDescription} (${validatedURL})`, 'error');
-        });
-
-        window.webContents.on('did-fail-provisional-load', (event, errorCode, errorDescription, validatedURL) => {
-            this.logToMainWindow(`线程 ${threadId} 页面临时加载失败: ${errorCode} - ${errorDescription} (${validatedURL})`, 'error');
-        });
+        
         
         // 设置用户代理
         await window.webContents.setUserAgent(deviceInfo.randomUserAgent);
-
-        // 注入设备信息
-        await this.injectDeviceInfo(window.webContents, deviceInfo);
 
         return window;
     }
@@ -218,25 +196,6 @@ class AutomationManager {
             }
         };
     }
-
-    /**
-     * 注入设备信息 - 使用preload方式
-     */
-    async injectDeviceInfo(webContents, deviceInfo) {
-        if (!webContents) {
-            throw new Error('webContents未初始化');
-        }
-
-        try {
-            // 通过IPC发送设备信息到preload脚本
-            webContents.send('inject-device-info', deviceInfo);
-            this.logToMainWindow('设备信息已发送到preload脚本');
-        } catch (error) {
-            this.logToMainWindow(`注入设备信息失败: ${error.message}`, 'error');
-            throw error;
-        }
-    }
-
 
     /**
      * 执行触摸点击
@@ -300,6 +259,8 @@ class AutomationManager {
             throw new Error('webContents未初始化');
         }
 
+        const webContentsId = webContents.id;
+        
         try {
             // 等待调试器准备就绪
             let retries = 0;
@@ -316,46 +277,145 @@ class AutomationManager {
                 return;
             }
 
+            // 等待当前webContents的触摸会话结束
+            while (this.touchSessions.get(webContentsId)) {
+                await new Promise(resolve => setTimeout(resolve, 100));
+            }
+
+            // 标记触摸会话开始
+            this.touchSessions.set(webContentsId, true);
+
+            // 生成唯一的触摸ID，避免冲突
+            const touchId = Date.now() % 10000; // 使用时间戳确保唯一性
+            
+            // 计算滑动距离和时间
+            const distance = Math.sqrt((endX - startX) ** 2 + (endY - startY) ** 2);
+            const duration = Math.max(200, Math.min(800, distance * 2)); // 200-800ms，根据距离调整
+            const steps = Math.max(5, Math.floor(distance / 20)); // 每20像素一个点，最少5个点
+            const stepDelay = duration / steps;
+
+            // 确保触摸会话干净，先发送取消事件清理之前的触摸
+            try {
+                await webContents.debugger.sendCommand('Input.dispatchTouchEvent', {
+                    type: 'touchCancel',
+                    touchPoints: []
+                });
+                await new Promise(resolve => setTimeout(resolve, 100));
+            } catch (e) {
+                // 忽略取消事件的错误，可能没有活跃的触摸会话
+            }
+
+            // 额外等待确保触摸会话完全清理
+            await new Promise(resolve => setTimeout(resolve, 200));
+
             // 发送触摸开始事件
             await webContents.debugger.sendCommand('Input.dispatchTouchEvent', {
                 type: 'touchStart',
                 touchPoints: [{
-                    id: 1,
+                    id: touchId,
                     x: startX,
                     y: startY
                 }]
             });
 
-            // 短暂延迟
-            await new Promise(resolve => setTimeout(resolve, 100));
+            // 短暂等待确保touchStart生效
+            await new Promise(resolve => setTimeout(resolve, 50));
 
-            // 发送触摸移动事件
-            await webContents.debugger.sendCommand('Input.dispatchTouchEvent', {
-                type: 'touchMove',
-                touchPoints: [{
-                    id: 1,
-                    x: endX,
-                    y: endY
-                }]
-            });
+            // 生成连续的触摸移动轨迹
+            for (let i = 1; i <= steps; i++) {
+                const progress = i / steps;
+                
+                // 使用贝塞尔曲线或线性插值生成平滑轨迹
+                const currentX = startX + (endX - startX) * progress;
+                const currentY = startY + (endY - startY) * progress;
+                
+                // 添加轻微的随机偏移，模拟手指的自然抖动
+                const jitterX = (Math.random() - 0.5) * 2;
+                const jitterY = (Math.random() - 0.5) * 2;
+                
+                await webContents.debugger.sendCommand('Input.dispatchTouchEvent', {
+                    type: 'touchMove',
+                    touchPoints: [{
+                        id: touchId,
+                        x: currentX + jitterX,
+                        y: currentY + jitterY
+                    }]
+                });
 
-            // 短暂延迟
-            await new Promise(resolve => setTimeout(resolve, 100));
+                // 动态延迟，开始快，结束慢，模拟真实滑动
+                const dynamicDelay = stepDelay * (1 + Math.sin(progress * Math.PI) * 0.3);
+                await new Promise(resolve => setTimeout(resolve, dynamicDelay));
+            }
 
             // 发送触摸结束事件
             await webContents.debugger.sendCommand('Input.dispatchTouchEvent', {
                 type: 'touchEnd',
                 touchPoints: [{
-                    id: 1,
+                    id: touchId,
                     x: endX,
                     y: endY
                 }]
             });
 
+            // 等待触摸会话完全结束
+            await new Promise(resolve => setTimeout(resolve, 100));
+
             this.logToMainWindow(`滑动操作执行完成: (${startX}, ${startY}) -> (${endX}, ${endY})`);
         } catch (error) {
             this.logToMainWindow(`执行滑动操作失败: ${error.message}`, 'error');
             throw error;
+        } finally {
+            // 释放触摸会话
+            this.touchSessions.set(webContentsId, false);
+        }
+    }
+
+    /**
+     * 开始定时点击
+     */
+    startPeriodicClick(webContents, intervalMs = 5000) {
+        const webContentsId = webContents.id;
+        
+        // 如果已经有定时器在运行，先清除
+        this.stopPeriodicClick(webContents);
+        
+        this.logToMainWindow(`开始定时点击，间隔: ${intervalMs}ms`, 'info');
+        
+        const timer = setInterval(async () => {
+            try {
+                // 获取当前窗口的屏幕尺寸
+                const window = webContents.getOwnerBrowserWindow();
+                const [width, height] = window.getSize();
+                
+                // 使用ClickConfigManager生成点击配置
+                const clickConfig = this.clickConfigManager.createClickConfig(width, height);
+                const pos = clickConfig.getRandomClickPosition();
+                
+                this.logToMainWindow(`定时点击位置: (${pos.x}, ${pos.y})`, 'info');
+                
+                // 执行点击操作
+                await this.performTouchClick(webContents, pos.x, pos.y);
+                
+            } catch (error) {
+                this.logToMainWindow(`定时点击失败: ${error.message}`, 'error');
+            }
+        }, intervalMs);
+        
+        // 存储定时器引用
+        this.clickTimers.set(webContentsId, timer);
+    }
+
+    /**
+     * 停止定时点击
+     */
+    stopPeriodicClick(webContents) {
+        const webContentsId = webContents.id;
+        const timer = this.clickTimers.get(webContentsId);
+        
+        if (timer) {
+            clearInterval(timer);
+            this.clickTimers.delete(webContentsId);
+            this.logToMainWindow(`停止定时点击`, 'info');
         }
     }
 
@@ -532,6 +592,9 @@ class AutomationManager {
                 });
             });
 
+            // 启动定时点击（每5秒一次）
+            this.startPeriodicClick(window.webContents, 5000);
+
             // 执行自动化操作
             try {
                 this.logToMainWindow(`任务 ${id} 开始执行自动化操作...`, 'info');
@@ -546,7 +609,7 @@ class AutomationManager {
             return {
                 taskId: id,
                 success: true,
-                screenshot: screenshotPath,
+                screenshot: "",
                 url: window.webContents.getURL()
             };
 
@@ -557,6 +620,11 @@ class AutomationManager {
                 success: false,
                 error: error.message
             };
+        } finally {
+            // 停止定时点击
+            if (window && window.webContents) {
+                this.stopPeriodicClick(window.webContents);
+            }
         }
     }
 
@@ -569,29 +637,44 @@ class AutomationManager {
             const window = webContents.getOwnerBrowserWindow();
             const [width, height] = window.getSize();
             
-            // 使用ClickConfigManager生成点击配置
-            const clickConfig = this.clickConfigManager.createClickConfig(width, height);
-            this.logToMainWindow(`生成点击配置 - 屏幕尺寸: ${width}x${height}`, 'info');
-
             // 模拟一些随机操作
             const actions = [
-                () => {
-                    const pos1 = clickConfig.getRandomClickPosition();
-                    return this.performTouchClick(webContents, pos1.x, pos1.y);
+                async () => {
+                    // 随机向上滑动1-3次
+                    const swipeCount = Math.floor(Math.random() * 3) + 1; // 1-3次
+                    this.logToMainWindow(`执行向上滑动 ${swipeCount} 次`, 'info');
+                    
+                    // 顺序执行滑动，避免触摸ID冲突
+                    for (let i = 0; i < swipeCount; i++) {
+                        // 生成符合人为习惯的滑动位置（偏向屏幕右侧）
+                        const rightBias = 0.7; // 70%概率在右侧，30%概率在左侧
+                        const isRightSide = Math.random() < rightBias;
+                        
+                        let startX, startY;
+                        if (isRightSide) {
+                            // 右侧区域：屏幕宽度的60%-90%
+                            startX = width * 0.6 + Math.random() * width * 0.3;
+                            startY = Math.random() * (height - 200) + 200; // 避免顶部和底部
+                        } else {
+                            // 左侧区域：屏幕宽度的10%-40%
+                            startX = width * 0.1 + Math.random() * width * 0.3;
+                            startY = Math.random() * (height - 200) + 200; // 避免顶部和底部
+                        }
+                        
+                        // 向上滑动：结束位置Y坐标比开始位置小
+                        const endX = startX + (Math.random() - 0.5) * 80; // X轴稍微偏移±40像素
+                        const endY = startY - (Math.random() * 200 + 100); // Y轴向上100-300像素
+                        
+                        this.logToMainWindow(`执行第 ${i + 1}/${swipeCount} 次滑动: (${Math.round(startX)}, ${Math.round(startY)}) -> (${Math.round(endX)}, ${Math.round(endY)})`, 'info');
+                        
+                        await this.performSwipe(webContents, startX, startY, endX, endY);
+                        
+                        // 每次滑动间隔，确保触摸会话完全结束
+                        if (i < swipeCount - 1) {
+                            await new Promise(resolve => setTimeout(resolve, 1000));
+                        }
+                    }
                 },
-                () => {
-                    const pos2 = clickConfig.getRandomClickPosition();
-                    return this.performTouchClick(webContents, pos2.x, pos2.y);
-                },
-                () => {
-                    const startPos = clickConfig.getRandomClickPosition();
-                    const endPos = clickConfig.getRandomClickPosition();
-                    return this.performSwipe(webContents, startPos.x, startPos.y, endPos.x, endPos.y);
-                },
-                () => {
-                    const pos3 = clickConfig.getRandomClickPosition();
-                    return this.performTouchClick(webContents, pos3.x, pos3.y);
-                }
             ];
 
             // 随机执行1-3个操作
@@ -600,13 +683,6 @@ class AutomationManager {
             
             for (let i = 0; i < actionCount; i++) {
                 const action = actions[Math.floor(Math.random() * actions.length)];
-                this.logToMainWindow(`执行第 ${i + 1}/${actionCount} 个操作`, 'info');
-                
-                // 如果是点击操作，显示点击位置
-                if (i < 2 || (i === 2 && Math.random() > 0.5)) {
-                    const pos = clickConfig.getRandomClickPosition();
-                    this.logToMainWindow(`随机点击位置: (${pos.x}, ${pos.y})`, 'info');
-                }
                 
                 await action();
                 await new Promise(resolve => setTimeout(resolve, 1000));
@@ -626,9 +702,17 @@ class AutomationManager {
         try {
             this.isRunning = false;
 
+            // 停止所有定时点击
+            for (const [webContentsId, timer] of this.clickTimers) {
+                clearInterval(timer);
+            }
+            this.clickTimers.clear();
+
             // 关闭所有活跃的窗口
             for (const [taskId, window] of this.activeWindows) {
                 if (window && !window.isDestroyed()) {
+                    // 停止该窗口的定时点击
+                    this.stopPeriodicClick(window.webContents);
                     window.close();
                 }
             }
