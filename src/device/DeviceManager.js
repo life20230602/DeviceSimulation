@@ -33,8 +33,6 @@ class DeviceManager {
             console.log(`设备管理器初始化完成，共加载 ${this.extractedDevices.length} 个设备`);
         } catch (error) {
             console.error('设备管理器初始化失败:', error);
-            // 即使文件加载失败，也使用默认设备
-            this.initializeDefaultDevices();
             this.initialized = true;
         }
     }
@@ -169,88 +167,93 @@ class DeviceManager {
         try {
             const lowerUA = userAgent.toLowerCase();
 
-            // 提取操作系统和版本
-            let os = 'Unknown';
-            let osVersion = 'Unknown';
-            let width = 375; // 默认宽度
-            let height = 667; // 默认高度
-            let deviceScaleFactor = 2.0; // 默认缩放
+            // 提取平台信息
+            let platform = 'Unknown';
+            if (lowerUA.includes('android')) {
+                if (lowerUA.includes('arm64') || lowerUA.includes('aarch64')) {
+                    platform = 'Linux aarch64';
+                } else if (lowerUA.includes('armv8')) {
+                    platform = 'Linux armv8l';
+                } else if (lowerUA.includes('armv7')) {
+                    platform = 'Linux armv7l';
+                } else {
+                    platform = 'Linux armv8l';
+                }
+            } else if (lowerUA.includes('iphone') || lowerUA.includes('ipad')) {
+                platform = 'Linux armv8l';
+            }
+
+            // 提取屏幕信息
+            let width = 375;
+            let height = 667;
+            let innerWidth = 375;
+            let innerHeight = 667;
+            let colorDepth = 24;
+            let pixelDepth = 24;
+            let devicePixelRatio = 2.0;
 
             if (lowerUA.includes('android')) {
-                os = 'Android';
-                // 提取Android版本
-                if (lowerUA.includes('android 14')) {
-                    osVersion = '14';
-                } else if (lowerUA.includes('android 13')) {
-                    osVersion = '13';
-                } else if (lowerUA.includes('android 12')) {
-                    osVersion = '12';
-                } else if (lowerUA.includes('android 11')) {
-                    osVersion = '11';
-                } else if (lowerUA.includes('android 10')) {
-                    osVersion = '10';
-                } else if (lowerUA.includes('android 9')) {
-                    osVersion = '9';
-                } else if (lowerUA.includes('android 8')) {
-                    osVersion = '8';
-                } else {
-                    osVersion = '11'; // 默认版本
-                }
-
-                // 根据品牌设置不同的屏幕尺寸
+                // Android设备屏幕尺寸
                 if (brand === '华为' || brand === 'Honor') {
                     width = 360;
                     height = 780;
-                    deviceScaleFactor = 3.0;
+                    innerWidth = 360;
+                    innerHeight = 720;
+                    devicePixelRatio = 3.0;
                 } else if (brand === '小米') {
                     width = 393;
                     height = 851;
-                    deviceScaleFactor = 2.75;
+                    innerWidth = 393;
+                    innerHeight = 800;
+                    devicePixelRatio = 2.75;
                 } else if (brand === 'Vivo') {
                     width = 360;
                     height = 760;
-                    deviceScaleFactor = 3.0;
+                    innerWidth = 360;
+                    innerHeight = 720;
+                    devicePixelRatio = 3.0;
                 } else if (brand === 'OPPO') {
                     width = 375;
                     height = 812;
-                    deviceScaleFactor = 3.0;
+                    innerWidth = 375;
+                    innerHeight = 780;
+                    devicePixelRatio = 3.0;
                 } else if (brand === 'Samsung') {
                     width = 360;
                     height = 740;
-                    deviceScaleFactor = 3.0;
+                    innerWidth = 360;
+                    innerHeight = 700;
+                    devicePixelRatio = 3.0;
                 }
-
             } else if (lowerUA.includes('iphone') || lowerUA.includes('ipad')) {
-                os = 'iOS';
-                // 提取iOS版本
-                if (lowerUA.includes('ios 18')) {
-                    osVersion = '18';
-                } else if (lowerUA.includes('ios 17')) {
-                    osVersion = '17';
-                } else if (lowerUA.includes('ios 16')) {
-                    osVersion = '16';
-                } else if (lowerUA.includes('ios 15')) {
-                    osVersion = '15';
-                } else if (lowerUA.includes('ios 14')) {
-                    osVersion = '14';
-                } else if (lowerUA.includes('ios 13')) {
-                    osVersion = '13';
-                } else if (lowerUA.includes('ios 12')) {
-                    osVersion = '12';
-                } else {
-                    osVersion = '15'; // 默认版本
-                }
-
                 // iOS设备屏幕尺寸
                 if (lowerUA.includes('ipad')) {
                     width = 768;
                     height = 1024;
-                    deviceScaleFactor = 2.0;
+                    innerWidth = 768;
+                    innerHeight = 1000;
+                    devicePixelRatio = 2.0;
                 } else {
                     width = 375;
                     height = 812;
-                    deviceScaleFactor = 3.0;
+                    innerWidth = 375;
+                    innerHeight = 780;
+                    devicePixelRatio = 3.0;
                 }
+            }
+
+            // 提取硬件信息
+            const hardware = {
+                cpuCores: 8
+            };
+
+            // 检查是否有WebGL信息
+            if (lowerUA.includes('adreno') || lowerUA.includes('mali') || lowerUA.includes('powervr') || lowerUA.includes('sgx')) {
+                hardware.webgl = {
+                    supported: true,
+                    renderer: this.extractWebGLRenderer(lowerUA),
+                    vendor: this.extractWebGLVendor(lowerUA)
+                };
             }
 
             // 提取设备型号
@@ -258,16 +261,19 @@ class DeviceManager {
 
             // 创建设备信息
             const device = {
-                deviceName: `${brand} ${model}`,
+                platform: platform,
+                screen: {
+                    width: width,
+                    height: height,
+                    innerWidth: innerWidth,
+                    innerHeight: innerHeight,
+                    colorDepth: colorDepth,
+                    pixelDepth: pixelDepth,
+                    devicePixelRatio: devicePixelRatio
+                },
+                hardware: hardware,
                 brand: brand,
                 model: model,
-                os: os,
-                osVersion: osVersion,
-                width: width,
-                height: height,
-                deviceScaleFactor: deviceScaleFactor,
-                isMobile: true,
-                hasTouch: true,
                 userAgents: new Map()
             };
 
@@ -281,6 +287,36 @@ class DeviceManager {
             console.error('提取设备信息失败:', error);
             return null;
         }
+    }
+
+    /**
+     * 提取WebGL渲染器
+     */
+    extractWebGLRenderer(lowerUA) {
+        if (lowerUA.includes('adreno')) {
+            return 'Adreno (TM) 618';
+        } else if (lowerUA.includes('mali')) {
+            return 'Mali-G78';
+        } else if (lowerUA.includes('powervr')) {
+            return 'PowerVR SGX';
+        } else if (lowerUA.includes('sgx')) {
+            return 'PowerVR SGX';
+        }
+        return 'Unknown';
+    }
+
+    /**
+     * 提取WebGL厂商
+     */
+    extractWebGLVendor(lowerUA) {
+        if (lowerUA.includes('adreno')) {
+            return 'Qualcomm';
+        } else if (lowerUA.includes('mali')) {
+            return 'ARM';
+        } else if (lowerUA.includes('powervr') || lowerUA.includes('sgx')) {
+            return 'Imagination Technologies';
+        }
+        return 'Unknown';
     }
 
     /**
@@ -379,65 +415,13 @@ class DeviceManager {
         }
     }
 
-    /**
-     * 初始化默认设备
-     */
-    initializeDefaultDevices() {
-        const defaultDevices = [
-            {
-                deviceName: 'iPhone 14 Pro',
-                brand: 'Apple',
-                model: 'iPhone 14 Pro',
-                os: 'iOS',
-                osVersion: '16',
-                width: 393,
-                height: 852,
-                deviceScaleFactor: 3.0,
-                isMobile: true,
-                hasTouch: true,
-                userAgents: new Map([['safari', 'Mozilla/5.0 (iPhone; CPU iPhone OS 16_0 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/16.0 Mobile/15E148 Safari/604.1']])
-            },
-            {
-                deviceName: 'Samsung Galaxy S23',
-                brand: 'Samsung',
-                model: 'Galaxy S23',
-                os: 'Android',
-                osVersion: '13',
-                width: 360,
-                height: 740,
-                deviceScaleFactor: 3.0,
-                isMobile: true,
-                hasTouch: true,
-                userAgents: new Map([['chrome', 'Mozilla/5.0 (Linux; Android 13; SM-S911B) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/112.0.0.0 Mobile Safari/537.36']])
-            },
-            {
-                deviceName: 'Huawei P50',
-                brand: '华为',
-                model: 'P50',
-                os: 'Android',
-                osVersion: '11',
-                width: 360,
-                height: 780,
-                deviceScaleFactor: 3.0,
-                isMobile: true,
-                hasTouch: true,
-                userAgents: new Map([['chrome', 'Mozilla/5.0 (Linux; Android 11; ELS-AN00) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/112.0.0.0 Mobile Safari/537.36']])
-            }
-        ];
-
-        this.extractedDevices = defaultDevices;
-    }
 
     /**
      * 获取随机设备信息
      */
     getRandomDevice() {
-        if (!this.initialized) {
-            this.initializeDefaultDevices();
-        }
-
-        if (this.extractedDevices.length === 0) {
-            this.initializeDefaultDevices();
+        if (!this.initialized || this.extractedDevices.length === 0) {
+            return null;
         }
 
         const randomIndex = Math.floor(Math.random() * this.extractedDevices.length);
@@ -452,36 +436,6 @@ class DeviceManager {
         }
 
         return device;
-    }
-
-    /**
-     * 获取所有设备
-     */
-    getAllDevices() {
-        if (!this.initialized) {
-            this.initializeDefaultDevices();
-        }
-        return this.extractedDevices;
-    }
-
-    /**
-     * 根据品牌获取设备
-     */
-    getDevicesByBrand(brand) {
-        if (!this.initialized) {
-            this.initializeDefaultDevices();
-        }
-        return this.extractedDevices.filter(device => device.brand === brand);
-    }
-
-    /**
-     * 根据操作系统获取设备
-     */
-    getDevicesByOS(os) {
-        if (!this.initialized) {
-            this.initializeDefaultDevices();
-        }
-        return this.extractedDevices.filter(device => device.os === os);
     }
 }
 

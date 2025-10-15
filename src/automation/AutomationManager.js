@@ -61,8 +61,8 @@ class AutomationManager {
      */
     async createBrowserWindow(deviceInfo, proxyAppKey = null, threadId) {
         // 使用设备信息中的屏幕尺寸，强制手机模式
-        const screenWidth = deviceInfo.width || 375;  // 默认iPhone宽度
-        const screenHeight = deviceInfo.height || 667; // 默认iPhone高度
+        const screenWidth = deviceInfo.screen.width;
+        const screenHeight = deviceInfo.screen.height;
         
         const windowOptions = {
             width: screenWidth,
@@ -72,7 +72,23 @@ class AutomationManager {
                 // images:true,
                 nodeIntegration: false,
                 contextIsolation: true,
-                preload: path.join(__dirname, '../preload/device-injector.js')
+                preload: path.join(__dirname, '../preload/device-injector.js'),
+                additionalArguments: [
+                    '--device-platform=' + deviceInfo.platform,
+                    '--device-screen-width=' + deviceInfo.screen.width,
+                    '--device-screen-height=' + deviceInfo.screen.height,
+                    '--device-inner-width=' + deviceInfo.screen.innerWidth,
+                    '--device-inner-height=' + deviceInfo.screen.innerHeight,
+                    '--device-color-depth=' + deviceInfo.screen.colorDepth,
+                    '--device-pixel-depth=' + deviceInfo.screen.pixelDepth,
+                    '--device-pixel-ratio=' + deviceInfo.screen.devicePixelRatio,
+                    '--device-cpu-cores=' + deviceInfo.hardware.cpuCores,
+                    '--device-webgl-supported=' + (deviceInfo.hardware.webgl?.supported || false),
+                    '--device-webgl-renderer=' + (deviceInfo.hardware.webgl?.renderer || ''),
+                    '--device-webgl-vendor=' + (deviceInfo.hardware.webgl?.vendor || ''),
+                    '--device-brand=' + deviceInfo.brand,
+                    '--device-model=' + deviceInfo.model
+                ]
             },
             show: true
         };
@@ -97,7 +113,7 @@ class AutomationManager {
                         width: screenWidth,
                         height: screenHeight
                     },
-                    deviceScaleFactor: deviceInfo.deviceScaleFactor || 2
+                    deviceScaleFactor: deviceInfo.screen.devicePixelRatio
                 });
                 
                 // 启用触摸模拟,并配置为移动设备模式
@@ -118,7 +134,8 @@ class AutomationManager {
         });
 
         // 记录设备信息
-        this.logToMainWindow(`创建BrowserWindow - 设备: ${deviceInfo.deviceName}, 屏幕: ${screenWidth}x${screenHeight}`, 'info');
+        const deviceName = `${deviceInfo.brand} ${deviceInfo.model}`;
+        this.logToMainWindow(`创建BrowserWindow - 设备: ${deviceName}, 屏幕: ${screenWidth}x${screenHeight}`, 'info');
     
 
         // 监听窗口关闭事件
@@ -385,6 +402,9 @@ class AutomationManager {
             // 设置线程数
             this.setThreadCount(threadCount);
 
+            // 确保设备管理器已初始化
+            await this.deviceManager.initialize();
+
             this.logToMainWindow(`启动自动化任务: ${taskCount}个任务, ${threadCount}个并发线程`, 'success');
 
             // 创建任务队列
@@ -460,6 +480,11 @@ class AutomationManager {
 
         try {
             this.logToMainWindow(`开始执行任务 ${id}`, 'info');
+
+            // 检查设备信息
+            if (!device) {
+                throw new Error('设备信息为空，请确保设备管理器已正确初始化');
+            }
 
             // 创建BrowserWindow
             window = await this.createBrowserWindow(device, proxyAppKey, id);
